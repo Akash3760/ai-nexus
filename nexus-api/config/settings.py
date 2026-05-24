@@ -49,9 +49,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    # "apps.authentication",
-    # "apps.users",
-    # "apps.common",
+    "apps.accounts",
 ]
 
 INSTALLED_APPS = (
@@ -214,6 +212,8 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
+AUTH_USER_MODEL = 'accounts.User'
+
 # ==================================================
 # DATABASE (MYSQL)
 # ==================================================
@@ -305,6 +305,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
 }
