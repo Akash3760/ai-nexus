@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Link, useNavigate }
-    from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
-import { Button }
-    from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+
+import FloatingInput from "@/components/common/FloatingInput";
+import PasswordInput from "@/components/common/PasswordInput";
 
 import { register }
     from "@/services/authService";
 
 export default function Register() {
+
     const navigate =
         useNavigate();
 
@@ -31,6 +34,7 @@ export default function Register() {
 
     const handleChange =
         (e) => {
+
             setFormData(
                 (prev) => ({
                     ...prev,
@@ -38,22 +42,28 @@ export default function Register() {
                         e.target.value,
                 })
             );
+
         };
 
     const handleRegister =
         async () => {
+
             try {
-                setLoading(true);
+
                 setError("");
 
                 if (
                     formData.password !==
                     formData.confirmPassword
                 ) {
+
                     return setError(
-                        "Passwords do not match"
+                        "Passwords do not match."
                     );
+
                 }
+
+                setLoading(true);
 
                 await register({
                     username:
@@ -69,109 +79,171 @@ export default function Register() {
                 navigate("/login");
 
             } catch (err) {
+
                 setError(
-                    err.response?.data
-                        ?.detail ||
-                    "Registration failed"
+                    err.response?.data?.detail ||
+                    "Registration failed."
                 );
+
             } finally {
+
                 setLoading(false);
+
             }
+
         };
 
+    const handleKeyDown =
+        (e) => {
+
+            if (
+                e.key === "Enter"
+            ) {
+                handleRegister();
+            }
+
+        };
+
+    const isFormValid =
+        formData.username.trim() &&
+        formData.email.trim() &&
+        formData.password.trim() &&
+        formData.confirmPassword.trim();
+
     return (
-        <div className="flex min-h-screen items-center justify-center px-4">
+        <div>
 
-            <div className="w-full max-w-md rounded-2xl border p-6 shadow-md">
+            <h2 className="text-3xl font-bold">
+                Create Account
+            </h2>
 
-                <h1 className="mb-6 text-3xl font-bold">
-                    Create Account
-                </h1>
+            <p className="mt-2 text-muted-foreground">
+                Create your AI Nexus workspace
+                and start building intelligent
+                AI-powered solutions.
+            </p>
 
-                {error && (
-                    <p className="mb-4 text-red-500">
-                        {error}
-                    </p>
-                )}
+            {error && (
 
-                <input
-                    type="text"
+                <div
+                    className="
+                        mt-6
+                        rounded-xl
+                        border
+                        border-destructive/20
+                        bg-destructive/10
+                        p-3
+                        text-sm
+                        text-destructive
+                    "
+                >
+                    {error}
+                </div>
+
+            )}
+
+            <div className="mt-8 space-y-6">
+
+                <FloatingInput
+                    label="Username"
                     name="username"
-                    placeholder="Username"
-                    value={
-                        formData.username
+                    value={formData.username}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
+                    onClear={() =>
+                        setFormData(
+                            (prev) => ({
+                                ...prev,
+                                username: "",
+                            })
+                        )
                     }
-                    onChange={
-                        handleChange
-                    }
-                    className="mb-3 w-full rounded-md border p-3"
                 />
 
-                <input
-                    type="email"
+                <FloatingInput
+                    label="Email Address"
                     name="email"
-                    placeholder="Email"
-                    value={
-                        formData.email
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
+                    onClear={() =>
+                        setFormData(
+                            (prev) => ({
+                                ...prev,
+                                email: "",
+                            })
+                        )
                     }
-                    onChange={
-                        handleChange
-                    }
-                    className="mb-3 w-full rounded-md border p-3"
                 />
 
-                <input
-                    type="password"
+                <PasswordInput
+                    label="Password"
                     name="password"
-                    placeholder="Password"
-                    value={
-                        formData.password
-                    }
-                    onChange={
-                        handleChange
-                    }
-                    className="mb-3 w-full rounded-md border p-3"
+                    value={formData.password}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                 />
 
-                <input
-                    type="password"
+                <PasswordInput
+                    label="Confirm Password"
                     name="confirmPassword"
-                    placeholder="Confirm Password"
                     value={
                         formData.confirmPassword
                     }
-                    onChange={
-                        handleChange
-                    }
-                    className="mb-4 w-full rounded-md border p-3"
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                 />
 
-                <Button
-                    onClick={
-                        handleRegister
-                    }
-                    className="w-full"
-                    disabled={
-                        loading
-                    }
-                >
-                    {loading
-                        ? "Creating account..."
-                        : "Register"}
-                </Button>
-
-                <p className="mt-4 text-center text-sm text-muted-foreground">
-                    Already have an account?
-                    {" "}
-                    <Link
-                        to="/login"
-                        className="font-medium text-primary"
-                    >
-                        Login
-                    </Link>
-                </p>
-
             </div>
+
+            <Button
+                onClick={handleRegister}
+                disabled={
+                    loading ||
+                    !isFormValid
+                }
+                className="
+                    mt-8
+                    h-14
+                    w-full
+                    rounded-xl
+                    text-base
+                "
+            >
+                {loading ? (
+                    <>
+                        <Loader2
+                            className="
+                                mr-2
+                                h-4
+                                w-4
+                                animate-spin
+                            "
+                        />
+
+                        Creating Account...
+                    </>
+                ) : (
+                    "Create Account"
+                )}
+            </Button>
+
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+                Already have an account?
+                {" "}
+                <Link
+                    to="/login"
+                    className="
+                    font-medium
+                    text-cyan-500
+                    hover:underline
+                "
+                >
+                    Login
+                </Link>
+            </p>
+
         </div>
     );
 }

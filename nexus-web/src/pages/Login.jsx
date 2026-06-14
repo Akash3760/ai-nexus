@@ -1,15 +1,21 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+import FloatingInput from "@/components/common/FloatingInput";
+import PasswordInput from "@/components/common/PasswordInput";
+
 import useAuthStore from "@/store/authStore";
+
 import {
     login,
     getProfile,
 } from "@/services/authService";
 
 export default function Login() {
+
     const navigate =
         useNavigate();
 
@@ -33,6 +39,7 @@ export default function Login() {
 
     const handleChange =
         (e) => {
+
             setFormData(
                 (prev) => ({
                     ...prev,
@@ -40,96 +47,213 @@ export default function Login() {
                         e.target.value,
                 })
             );
+
+        };
+
+    const clearEmail =
+        () => {
+
+            setFormData(
+                (prev) => ({
+                    ...prev,
+                    email: "",
+                })
+            );
+
         };
 
     const handleLogin =
         async () => {
+
+            if (
+                !formData.email ||
+                !formData.password
+            ) {
+                return;
+            }
+
             try {
+
                 setLoading(true);
                 setError("");
 
-                // Login
                 await login(
                     formData
                 );
 
-                // Get profile
                 const user =
                     await getProfile();
 
-                // Save user in Zustand
                 setUser(user);
 
-                // Redirect
+                const recentEmails =
+                    JSON.parse(
+                        localStorage.getItem(
+                            "recentEmails"
+                        )
+                    ) || [];
+
+                if (
+                    !recentEmails.includes(
+                        formData.email
+                    )
+                ) {
+
+                    recentEmails.unshift(
+                        formData.email
+                    );
+
+                    localStorage.setItem(
+                        "recentEmails",
+                        JSON.stringify(
+                            recentEmails.slice(
+                                0,
+                                5
+                            )
+                        )
+                    );
+
+                }
+
                 navigate(
                     "/dashboard"
                 );
 
             } catch (err) {
+
                 setError(
-                    err.response?.data
-                        ?.detail ||
-                    "Login failed"
+                    err.response?.data?.detail ||
+                    "Invalid email or password."
                 );
+
             } finally {
+
                 setLoading(false);
+
             }
+
         };
 
+    const handleKeyDown =
+        (e) => {
+
+            if (
+                e.key === "Enter"
+            ) {
+                handleLogin();
+            }
+
+        };
+
+    const isFormValid =
+        formData.email.trim() &&
+        formData.password.trim();
+
     return (
-        <div className="flex min-h-screen items-center justify-center">
-            <div className="w-full max-w-md rounded-xl border p-6 shadow-md">
+        <div>
 
-                <h1 className="mb-6 text-2xl font-bold">
-                    Login
-                </h1>
+            <h2 className="text-3xl font-bold">
+                Welcome Back
+            </h2>
 
-                {error && (
-                    <p className="mb-4 text-red-500">
-                        {error}
-                    </p>
-                )}
+            <p className="mt-2 text-muted-foreground">
+                Sign in to access your AI agents,
+                workflows, and workspace.
+            </p>
 
-                <input
-                    type="email"
-                    name="email"
-                    placeholder="Email"
-                    value={
-                        formData.email
-                    }
-                    onChange={
-                        handleChange
-                    }
-                    className="mb-3 w-full rounded-md border p-3"
-                />
+            {error && (
 
-                <input
-                    type="password"
-                    name="password"
-                    placeholder="Password"
-                    value={
-                        formData.password
-                    }
-                    onChange={
-                        handleChange
-                    }
-                    className="mb-4 w-full rounded-md border p-3"
-                />
-
-                <Button
-                    onClick={
-                        handleLogin
-                    }
-                    className="w-full"
-                    disabled={
-                        loading
-                    }
+                <div
+                    className="
+                    mt-6
+                    rounded-xl
+                    border
+                    border-destructive/20
+                    bg-destructive/10
+                    p-3
+                    text-sm
+                    text-destructive
+                "
                 >
-                    {loading
-                        ? "Logging in..."
-                        : "Login"}
-                </Button>
+                    {error}
+                </div>
+
+            )}
+
+            <div className="mt-8 space-y-6">
+
+                <FloatingInput
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    onClear={clearEmail}
+                    onKeyDown={handleKeyDown}
+                />
+
+                <PasswordInput
+                    label="Password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
+                />
+
             </div>
+
+            <Button
+                onClick={handleLogin}
+                disabled={
+                    loading ||
+                    !isFormValid
+                }
+                className="
+                mt-8
+                h-14
+                w-full
+                rounded-xl
+                text-base
+            "
+            >
+                {loading ? (
+                    <>
+                        <Loader2
+                            className="
+                            mr-2
+                            h-4
+                            w-4
+                            animate-spin
+                        "
+                        />
+
+                        Signing In...
+                    </>
+                ) : (
+                    "Sign In"
+                )}
+            </Button>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+
+                Don't have an account?
+
+                {" "}
+
+                <Link
+                    to="/register"
+                    className="
+                    font-medium
+                    text-cyan-500
+                    hover:underline
+                "
+                >
+                    Create Account
+                </Link>
+
+            </p>
+
         </div>
     );
+
 }
