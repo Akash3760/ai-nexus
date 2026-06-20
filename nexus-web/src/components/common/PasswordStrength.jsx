@@ -6,45 +6,48 @@ export default function PasswordStrength({
 
         if (!password) {
             return {
-                text: "Weak",
+                label: "Password Strength",
                 color: "bg-muted",
                 width: "0%",
+                textColor: "text-muted-foreground",
+                isEmpty: true,
             };
         }
 
         if (password.length < 6) {
             return {
-                text: "Weak",
+                label: "Weak",
                 color: "bg-red-500",
                 width: "33%",
+                textColor: "text-red-500",
+                isEmpty: false,
             };
         }
 
         if (password.length < 10) {
             return {
-                text: "Medium",
+                label: "Medium",
                 color: "bg-yellow-500",
                 width: "66%",
+                textColor: "text-yellow-500",
+                isEmpty: false,
             };
         }
 
         return {
-            text: "Strong",
+            label: "Strong",
             color: "bg-green-500",
             width: "100%",
+            textColor: "text-green-500",
+            isEmpty: false,
         };
     };
 
     const strength =
         getStrength();
 
-
     return (
-        <div className={`
-            mt-3
-            transition-all
-            duration-300
-        `}>
+        <div className="mt-3">
 
             <div className="h-2 overflow-hidden rounded-full bg-muted">
 
@@ -63,40 +66,18 @@ export default function PasswordStrength({
 
             </div>
 
-            <div
-                className={`
-        mt-2
-        flex
-        justify-end
-
-        transition-all
-        duration-300
-
-        ${password
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 -translate-y-1"
-                    }
-    `}
-            >
+            <div className="mt-2 flex justify-end">
 
                 <span
                     className={`
-            text-xs
-            font-medium
-            transition-colors
-            duration-500
-
-            ${strength.text === "Weak"
-                            ? "text-red-500"
-                            : strength.text === "Medium"
-                                ? "text-yellow-500"
-                                : "text-green-500"
-                        }
-        `}
+                        text-xs
+                        font-medium
+                        transition-all
+                        duration-500
+                        ${strength.textColor}
+                    `}
                 >
-                    Password Strength:
-                    {" "}
-                    {strength.text}
+                    {strength.label}
                 </span>
 
             </div>
