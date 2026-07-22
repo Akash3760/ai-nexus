@@ -1,6 +1,4 @@
-import {
-    createBrowserRouter,
-} from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 
 import ProtectedRoute from "@/components/common/ProtectedRoute";
 
@@ -12,13 +10,13 @@ import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/dashboard/Dashboard";
+import Workspace from "@/features/workspace/pages/Workspace";
 import NotFound from "@/pages/NotFound";
 
 const router = createBrowserRouter([
     {
         path: "/",
         element: <MainLayout />,
-
         children: [
             {
                 index: true,
@@ -30,7 +28,6 @@ const router = createBrowserRouter([
     {
         path: "/",
         element: <AuthLayout />,
-
         children: [
             {
                 path: "login",
@@ -44,18 +41,25 @@ const router = createBrowserRouter([
     },
 
     {
-        path: "/dashboard",
-
         element: (
             <ProtectedRoute>
                 <DashboardLayout />
             </ProtectedRoute>
         ),
-
         children: [
             {
-                index: true,
-                element: <Dashboard />,
+                path: "/dashboard",
+                children: [
+                    {
+                        index: true,
+                        element: <Dashboard />,
+                    },
+
+                    {
+                        path: "workspace",
+                        element: <Workspace />,
+                    },
+                ],
             },
         ],
     },

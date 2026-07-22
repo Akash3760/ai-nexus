@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import {
-    Bot,
+    BrainCircuit,
+    Files,
+    FileText,
     Workflow,
     Brain,
     BarChart3,
@@ -22,38 +24,38 @@ import { Button } from "@/components/ui/button";
 
 const stats = [
     {
-        title: "Active AI Agents",
-        value: "12",
-        change: "+3 this week",
-        icon: Bot,
+        title: "Files Processed",
+        value: "--",
+        change: "Waiting for backend",
+        icon: Files,
     },
     {
-        title: "Workflows Executed",
-        value: "248",
-        change: "+18 today",
-        icon: Workflow,
+        title: "AI Sessions",
+        value: "--",
+        change: "Live statistics",
+        icon: BrainCircuit,
     },
     {
-        title: "Knowledge Sources",
-        value: "36",
-        change: "+5 uploaded",
-        icon: Brain,
+        title: "Reports Generated",
+        value: "--",
+        change: "Backend pending",
+        icon: FileText,
     },
     {
-        title: "Success Rate",
-        value: "99.2%",
-        change: "Stable performance",
+        title: "Requests Today",
+        value: "--",
+        change: "Real-time",
         icon: Activity,
     },
 ];
 
 const modules = [
     {
-        title: "AI Agents",
+        title: "AI Workspace",
         description:
-            "Build, deploy, and manage intelligent AI agents for operations, support, and automation.",
-        icon: Bot,
-        to: "/dashboard/agents",
+            "Analyze files, generate reports, explore insights, and access AI-powered productivity tools.",
+        icon: BrainCircuit,
+        to: "/dashboard/workspace",
     },
     {
         title: "Workflows",
@@ -94,22 +96,22 @@ const modules = [
 
 const recentActivity = [
     {
-        title: "Support Agent resolved 28 customer requests",
+        title: "Spreadsheet analysis completed successfully",
         time: "10 min ago",
-        icon: Bot,
+        icon: BrainCircuit,
     },
     {
-        title: "Workflow “Lead Qualification Pipeline” completed successfully",
+        title: "AI report generated successfully",
         time: "32 min ago",
         icon: Workflow,
     },
     {
-        title: "New knowledge document uploaded to Sales Workspace",
+        title: "New document uploaded for AI analysis",
         time: "1 hour ago",
         icon: Database,
     },
     {
-        title: "Analytics report generated for weekly AI usage",
+        title: "Workspace usage report generated",
         time: "2 hours ago",
         icon: BarChart3,
     },
@@ -117,9 +119,9 @@ const recentActivity = [
 
 const quickActions = [
     {
-        title: "Create Agent",
-        icon: Bot,
-        to: "/dashboard/agents",
+        title: "Open Workspace",
+        icon: BrainCircuit,
+        to: "/dashboard/workspace",
     },
     {
         title: "New Workflow",
@@ -127,7 +129,7 @@ const quickActions = [
         to: "/dashboard/workflows",
     },
     {
-        title: "Upload Knowledge",
+        title: "Upload File",
         icon: Brain,
         to: "/dashboard/knowledge",
     },
@@ -192,8 +194,7 @@ export default function Dashboard() {
                         </h1>
 
                         <p className="mt-5 max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
-                            Manage your AI agents, workflows, knowledge systems,
-                            analytics, and workspace operations from one intelligent control center.
+                            Analyze spreadsheets, PDFs, documents, and images, generate AI-powered reports, and manage your AI workspace from one intelligent platform.
                         </p>
 
                         <div className="mt-8 flex flex-wrap gap-4">
@@ -201,9 +202,9 @@ export default function Dashboard() {
                                 asChild
                                 className="h-12 rounded-xl px-6"
                             >
-                                <Link to="/dashboard/agents">
+                                <Link to="/dashboard/workspace">
                                     <Plus className="mr-2 h-4 w-4" />
-                                    Create Agent
+                                    Open Workspace
                                 </Link>
                             </Button>
 
@@ -232,7 +233,7 @@ export default function Dashboard() {
                                         </p>
 
                                         <p className="text-xs text-muted-foreground">
-                                            Run AI workflows at scale
+                                            Analyze files with AI
                                         </p>
                                     </div>
                                 </div>
@@ -250,7 +251,7 @@ export default function Dashboard() {
                                         </p>
 
                                         <p className="text-xs text-muted-foreground">
-                                            Connect docs, prompts and memory
+                                            Process spreadsheets, PDFs and documents
                                         </p>
                                     </div>
                                 </div>
@@ -268,7 +269,7 @@ export default function Dashboard() {
                                         </p>
 
                                         <p className="text-xs text-muted-foreground">
-                                            Built for team operations
+                                            Secure AI-powered workspace
                                         </p>
                                     </div>
                                 </div>
@@ -304,7 +305,7 @@ export default function Dashboard() {
 
                                 <div>
                                     <p className="text-sm text-muted-foreground">
-                                        AI Runtime
+                                        AI Processing
                                     </p>
 
                                     <p className="font-semibold">
@@ -384,7 +385,7 @@ export default function Dashboard() {
                 <div className="rounded-[32px] border border-border bg-card p-6 shadow-sm lg:p-8">
                     <div className="mb-6">
                         <h2 className="text-2xl font-bold">
-                            AI Nexus Modules
+                            Workspace Modules
                         </h2>
 
                         <p className="mt-2 text-sm text-muted-foreground">
@@ -490,13 +491,13 @@ export default function Dashboard() {
                     {/* SYSTEM OVERVIEW */}
                     <div className="rounded-[32px] border border-border bg-card p-6 shadow-sm">
                         <h2 className="text-xl font-bold">
-                            AI System Overview
+                            Workspace Overview
                         </h2>
 
                         <div className="mt-6 space-y-5">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">
-                                    Agent Runtime
+                                    AI Services
                                 </span>
 
                                 <span className="font-medium text-green-500">
@@ -506,7 +507,7 @@ export default function Dashboard() {
 
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">
-                                    Workflow Queue
+                                    Processing Queue
                                 </span>
 
                                 <span className="font-medium">
@@ -516,7 +517,7 @@ export default function Dashboard() {
 
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">
-                                    Knowledge Sync
+                                    API Usage
                                 </span>
 
                                 <span className="font-medium">
@@ -547,7 +548,7 @@ export default function Dashboard() {
                     </h2>
 
                     <p className="mt-2 text-sm text-muted-foreground">
-                        Track the latest actions across agents, workflows, and workspace systems.
+                        Track recent uploads, AI analyses, generated reports, and workspace activity.
                     </p>
                 </div>
 

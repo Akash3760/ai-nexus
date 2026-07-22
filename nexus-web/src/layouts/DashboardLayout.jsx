@@ -35,9 +35,9 @@ const navItems = [
         to: "/dashboard",
     },
     {
-        title: "AI Agents",
+        title: "AI Workspace",
         icon: Bot,
-        to: "/dashboard/agents",
+        to: "/dashboard/workspace",
     },
     {
         title: "Workflows",

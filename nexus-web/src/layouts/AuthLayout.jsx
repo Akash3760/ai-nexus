@@ -51,7 +51,7 @@ export default function AuthLayout() {
                     </h1>
 
                     <p className="mt-6 max-w-md text-lg leading-8 text-muted-foreground">
-                        Build intelligent agents, automate workflows,
+                        Build intelligent AI workspaces, automate workflows,
                         and scale your organization with the power
                         of artificial intelligence.
                     </p>
@@ -60,7 +60,7 @@ export default function AuthLayout() {
 
                         <div className="flex items-center gap-3">
                             <span className="text-cyan-400">✓</span>
-                            <span>AI Agents & Assistants</span>
+                            <span>AI workspaces</span>
                         </div>
 
                         <div className="flex items-center gap-3">

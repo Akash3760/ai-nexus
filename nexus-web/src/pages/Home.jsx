@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-    Bot,
+    BrainCircuit,
     Workflow,
     Brain,
     ShieldCheck,
@@ -14,10 +14,10 @@ import { Button } from "@/components/ui/button";
 
 const features = [
     {
-        icon: Bot,
-        title: "AI Agents",
+        icon: BrainCircuit,
+        title: "AI Workspace",
         description:
-            "Create intelligent AI agents that automate business operations.",
+            "Access AI-powered tools to analyze files, generate reports, and boost productivity.",
     },
     {
         icon: Workflow,
@@ -85,7 +85,7 @@ export default function Home() {
                             </h1>
 
                             <p className="mt-8 max-w-2xl text-lg leading-8 text-muted-foreground">
-                                Create intelligent AI agents, automate workflows,
+                                Create intelligent AI Workspace, automate workflows,
                                 collaborate with teams, and scale operations from a
                                 single unified workspace.
                             </p>
@@ -178,7 +178,7 @@ export default function Home() {
                         <span>Redis</span>
                         <span>Celery</span>
                         <span>MySQL</span>
-                        <span>AI Agents</span>
+                        <span>AI Workspace</span>
 
                     </div>
 
@@ -327,7 +327,7 @@ export default function Home() {
                 </h2>
 
                 <p className="mx-auto mt-6 max-w-3xl text-lg text-muted-foreground">
-                    Start building intelligent systems, AI agents and
+                    Start building intelligent systems, AI Workspace and
                     automated workflows today.
                 </p>
 

@@ -157,8 +157,8 @@ export default function Login() {
             </h2>
 
             <p className="mt-2 text-muted-foreground">
-                Sign in to access your AI agents,
-                workflows, and workspace.
+                Sign in to access your AI workspace and
+                manage your files, workflows, and intelligent tools.
             </p>
 
             {error && (
