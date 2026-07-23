@@ -1,33 +1,20 @@
-import {
-    createBrowserRouter,
-} from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
-import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
+import useAuthStore from "@/store/authStore";
 
-import ProtectedRoute
-    from "@/app/ProtectedRoute";
+export default function ProtectedRoute({ children }) {
+    const {
+        user,
+        loading,
+    } = useAuthStore();
 
-const router =
-    createBrowserRouter([
-        {
-            path: "/",
-            element: <Login />,
-        },
+    if (loading) {
+        return null;
+    }
 
-        {
-            path: "/login",
-            element: <Login />,
-        },
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
 
-        {
-            path: "/dashboard",
-            element: (
-                <ProtectedRoute>
-                    <Dashboard />
-                </ProtectedRoute>
-            ),
-        },
-    ]);
-
-export default router;
+    return children;
+}

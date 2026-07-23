@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
     BrainCircuit,
     Files,
@@ -6,49 +7,86 @@ import {
     TrendingUp,
 } from "lucide-react";
 
-const stats = [
-    {
-        title: "Files Processed",
-        value: "--",
-        subtitle: "Documents analyzed",
-        change: "Waiting for backend",
-        icon: Files,
-        iconClass: "bg-cyan-500/10 text-cyan-500",
-        changeClass: "text-cyan-500",
-    },
-    {
-        title: "AI Sessions",
-        value: "--",
-        subtitle: "Completed conversations",
-        change: "Live statistics",
-        icon: BrainCircuit,
-        iconClass: "bg-emerald-500/10 text-emerald-500",
-        changeClass: "text-emerald-500",
-    },
-    {
-        title: "Reports Generated",
-        value: "--",
-        subtitle: "AI-generated outputs",
-        change: "Backend pending",
-        icon: FileText,
-        iconClass: "bg-amber-500/10 text-amber-500",
-        changeClass: "text-amber-500",
-    },
-    {
-        title: "Requests Today",
-        value: "--",
-        subtitle: "Today's AI requests",
-        change: "Real-time",
-        icon: Activity,
-        iconClass: "bg-violet-500/10 text-violet-500",
-        changeClass: "text-violet-500",
-    },
-];
+import { getWorkspaceStats } from "@/services/workspaceService";
 
 export default function AIWorkspaceStats() {
+    const [stats, setStats] = useState({
+        total_files: 0,
+        completed_jobs: 0,
+        running_jobs: 0,
+        total_activities: 0,
+    });
+
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadStats() {
+            try {
+                const data = await getWorkspaceStats();
+
+                if (!ignore) {
+                    setStats(data);
+                }
+            } catch (error) {
+                console.error(error);
+            } finally {
+                if (!ignore) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        loadStats();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    const cards = [
+        {
+            title: "Files Processed",
+            value: stats.total_files,
+            subtitle: "Documents analyzed",
+            change: "Live from backend",
+            icon: Files,
+            iconClass: "bg-cyan-500/10 text-cyan-500",
+            changeClass: "text-cyan-500",
+        },
+        {
+            title: "Completed Jobs",
+            value: stats.completed_jobs,
+            subtitle: "Finished AI tasks",
+            change: "Completed successfully",
+            icon: BrainCircuit,
+            iconClass: "bg-emerald-500/10 text-emerald-500",
+            changeClass: "text-emerald-500",
+        },
+        {
+            title: "Running Jobs",
+            value: stats.running_jobs,
+            subtitle: "Currently processing",
+            change: "Real-time updates",
+            icon: FileText,
+            iconClass: "bg-amber-500/10 text-amber-500",
+            changeClass: "text-amber-500",
+        },
+        {
+            title: "Activity",
+            value: stats.total_activities,
+            subtitle: "Workspace activity",
+            change: "Latest events",
+            icon: Activity,
+            iconClass: "bg-violet-500/10 text-violet-500",
+            changeClass: "text-violet-500",
+        },
+    ];
+
     return (
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {stats.map((item) => {
+            {cards.map((item) => {
                 const Icon = item.icon;
 
                 return (
@@ -76,7 +114,7 @@ export default function AIWorkspaceStats() {
                                 </p>
 
                                 <h2 className="mt-3 text-4xl font-bold tracking-tight">
-                                    {item.value}
+                                    {loading ? "--" : item.value}
                                 </h2>
 
                                 <p className="mt-2 text-sm text-muted-foreground">

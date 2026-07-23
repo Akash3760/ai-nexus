@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import {
     BrainCircuit,
-    Upload,
     Sparkles,
     ArrowRight,
 } from "lucide-react";
@@ -9,14 +8,6 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default function AIWorkspaceHeader() {
-    // Placeholder values.
-    // Replace these with data from your Django API later.
-    const stats = {
-        filesProcessed: "--",
-        aiSessions: "--",
-        reportsGenerated: "--",
-    };
-
     return (
         <section
             className="
@@ -79,10 +70,10 @@ export default function AIWorkspaceHeader() {
                             </h1>
 
                             <p className="mt-2 max-w-2xl text-muted-foreground">
-                                Upload files, analyze data, generate reports,
-                                summarize documents, create formulas, and solve
-                                everyday business tasks with AI. More AI tools
-                                and assistants can be added here over time.
+                                Upload files, analyze documents, generate
+                                reports, summarize content, automate workflows,
+                                and unlock AI-powered productivity from one
+                                workspace.
                             </p>
                         </div>
                     </div>
@@ -92,9 +83,9 @@ export default function AIWorkspaceHeader() {
                             asChild
                             className="h-12 rounded-xl px-6"
                         >
-                            <Link to="/dashboard/workspace/upload">
-                                <Upload className="mr-2 h-4 w-4" />
-                                Upload File
+                            <Link to="/dashboard/workspace/files">
+                                Browse Files
+                                <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                         </Button>
 
@@ -113,49 +104,52 @@ export default function AIWorkspaceHeader() {
 
                 {/* Right */}
                 <div className="grid gap-4 sm:grid-cols-3 lg:w-[420px] lg:grid-cols-1">
-                    <div className="rounded-3xl border border-border bg-background/80 p-5 backdrop-blur">
-                        <p className="text-sm text-muted-foreground">
-                            Files Processed
-                        </p>
+                    <StatCard
+                        title="Files Processed"
+                        value="--"
+                        subtitle="Live from backend"
+                    />
 
-                        <h3 className="mt-2 text-3xl font-bold">
-                            {stats.filesProcessed}
-                        </h3>
+                    <StatCard
+                        title="AI Sessions"
+                        value="--"
+                        subtitle="Updated in real time"
+                    />
 
-                        <p className="mt-1 text-sm text-emerald-500">
-                            Live from backend
-                        </p>
-                    </div>
-
-                    <div className="rounded-3xl border border-border bg-background/80 p-5 backdrop-blur">
-                        <p className="text-sm text-muted-foreground">
-                            AI Sessions
-                        </p>
-
-                        <h3 className="mt-2 text-3xl font-bold">
-                            {stats.aiSessions}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-cyan-500">
-                            Updated in real time
-                        </p>
-                    </div>
-
-                    <div className="rounded-3xl border border-border bg-background/80 p-5 backdrop-blur">
-                        <p className="text-sm text-muted-foreground">
-                            Reports Generated
-                        </p>
-
-                        <h3 className="mt-2 text-3xl font-bold">
-                            {stats.reportsGenerated}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-blue-500">
-                            AI-generated insights
-                        </p>
-                    </div>
+                    <StatCard
+                        title="Reports Generated"
+                        value="--"
+                        subtitle="AI-generated insights"
+                    />
                 </div>
             </div>
         </section>
+    );
+}
+
+function StatCard({ title, value, subtitle }) {
+    return (
+        <div
+            className="
+                rounded-3xl
+                border
+                border-border
+                bg-background/80
+                p-5
+                backdrop-blur
+            "
+        >
+            <p className="text-sm text-muted-foreground">
+                {title}
+            </p>
+
+            <h3 className="mt-2 text-3xl font-bold">
+                {value}
+            </h3>
+
+            <p className="mt-1 text-sm text-cyan-500">
+                {subtitle}
+            </p>
+        </div>
     );
 }

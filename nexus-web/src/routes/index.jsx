@@ -1,6 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 
-import ProtectedRoute from "@/components/common/ProtectedRoute";
+import ProtectedRoute from "@/app/ProtectedRoute";
 
 import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
@@ -11,9 +11,11 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import Workspace from "@/features/workspace/pages/Workspace";
+import FilePreview from "@/features/workspace/pages/FilePreview";
 import NotFound from "@/pages/NotFound";
 
 const router = createBrowserRouter([
+    // Public
     {
         path: "/",
         element: <MainLayout />,
@@ -25,6 +27,7 @@ const router = createBrowserRouter([
         ],
     },
 
+    // Authentication
     {
         path: "/",
         element: <AuthLayout />,
@@ -40,7 +43,9 @@ const router = createBrowserRouter([
         ],
     },
 
+    // Protected Dashboard
     {
+        path: "/dashboard",
         element: (
             <ProtectedRoute>
                 <DashboardLayout />
@@ -48,22 +53,62 @@ const router = createBrowserRouter([
         ),
         children: [
             {
-                path: "/dashboard",
-                children: [
-                    {
-                        index: true,
-                        element: <Dashboard />,
-                    },
+                index: true,
+                element: <Dashboard />,
+            },
 
-                    {
-                        path: "workspace",
-                        element: <Workspace />,
-                    },
-                ],
+            // Workspace Dashboard
+            {
+                path: "workspace",
+                element: <Workspace />,
+            },
+
+            {
+                path: "workspace/files/:id",
+                element: <FilePreview />,
+            },
+
+            // Temporary routes (point to Workspace)
+            {
+                path: "workspace/upload",
+                element: <Workspace />,
+            },
+            {
+                path: "workspace/history",
+                element: <Workspace />,
+            },
+            {
+                path: "workspace/files",
+                element: <Workspace />,
+            },
+            {
+                path: "workspace/spreadsheet",
+                element: <Workspace />,
+            },
+            {
+                path: "workspace/pdf",
+                element: <Workspace />,
+            },
+            {
+                path: "workspace/image",
+                element: <Workspace />,
+            },
+            {
+                path: "workspace/report",
+                element: <Workspace />,
+            },
+            {
+                path: "workspace/workflow",
+                element: <Workspace />,
+            },
+            {
+                path: "workspace/chat",
+                element: <Workspace />,
             },
         ],
     },
 
+    // 404
     {
         path: "*",
         element: <NotFound />,
