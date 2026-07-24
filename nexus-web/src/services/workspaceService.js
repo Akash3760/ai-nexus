@@ -60,6 +60,47 @@ export async function deleteFile(id) {
     await api.delete(`workspace/files/${id}/`);
 }
 
+export async function downloadFile(id) {
+    const response = await api.get(
+        `workspace/files/${id}/download/`,
+        {
+            responseType: "blob",
+        }
+    );
+
+    const disposition =
+        response.headers["content-disposition"];
+
+    let filename = "download";
+
+    if (disposition) {
+        const match = disposition.match(
+            /filename="?(.+?)"?$/
+        );
+
+        if (match) {
+            filename = match[1];
+        }
+    }
+
+    const url = window.URL.createObjectURL(
+        new Blob([response.data])
+    );
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+}
+
 /* =========================
    Activity
 ========================= */

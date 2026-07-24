@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
     FileSpreadsheet,
@@ -10,7 +10,14 @@ import {
     ArrowUpRight,
 } from "lucide-react";
 
-import { getRecentFiles } from "@/services/workspaceService";
+import {
+    getRecentFiles,
+    deleteFile,
+    downloadFile,
+} from "@/services/workspaceService";
+
+import FileActions from "./FileActions";
+import DeleteFileDialog from "./DeleteFileDialog";
 
 const iconMap = {
     spreadsheet: {
@@ -73,6 +80,10 @@ function formatTime(date) {
 export default function RecentFiles() {
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         let ignore = false;
@@ -99,6 +110,40 @@ export default function RecentFiles() {
             ignore = true;
         };
     }, []);
+
+    const handleDownload = async (file) => {
+        try {
+            await downloadFile(file.id);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleDeleteClick = (file) => {
+        setSelectedFile(file);
+        setDeleteOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!selectedFile) return;
+
+        try {
+            setDeleting(true);
+
+            await deleteFile(selectedFile.id);
+
+            setFiles((prev) =>
+                prev.filter((f) => f.id !== selectedFile.id)
+            );
+
+            setDeleteOpen(false);
+            setSelectedFile(null);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     return (
         <section className="space-y-6">
@@ -140,6 +185,7 @@ export default function RecentFiles() {
 
                         return (
                             <motion.div
+                                key={file.id}
                                 initial={{
                                     opacity: 0,
                                     y: 15,
@@ -156,8 +202,7 @@ export default function RecentFiles() {
                                     y: -2,
                                 }}
                             >
-                                <Link
-                                    to={`/dashboard/workspace/files/${file.id}`}
+                                <div
                                     className="
                                         flex
                                         items-center
@@ -196,30 +241,49 @@ export default function RecentFiles() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-6">
+                                    <div className="flex items-center gap-3">
+
                                         <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
                                             <Clock3 className="h-4 w-4" />
                                             {formatTime(file.created_at)}
                                         </div>
 
-                                        <Link
-                                            to={`/dashboard/workspace/files/${file.id}`}
+                                        <button
+                                            onClick={() =>
+                                                navigate(`/dashboard/workspace/files/${file.id}`)
+                                            }
                                             className="
-                                            rounded-lg
-                                            p-2
-                                            transition-colors
-                                            hover:bg-muted
-                                        "
+                                                rounded-lg
+                                                p-2
+                                                transition-colors
+                                                hover:bg-muted
+                                            "
                                         >
                                             <ArrowUpRight className="h-5 w-5" />
-                                        </Link>
+                                        </button>
+
+                                        <FileActions
+                                            file={file}
+                                            onDownload={handleDownload}
+                                            onDelete={handleDeleteClick}
+                                        />
+
                                     </div>
-                                </Link>
+                                </div>
                             </motion.div>
                         );
                     })
                 )}
             </div>
+
+            <DeleteFileDialog
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                file={selectedFile}
+                loading={deleting}
+                onConfirm={handleDelete}
+            />
+
         </section>
     );
 }

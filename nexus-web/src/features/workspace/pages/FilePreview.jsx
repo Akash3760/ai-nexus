@@ -5,6 +5,7 @@ import {
     ArrowLeft,
     FileSpreadsheet,
     Loader2,
+    Table2,
     AlertCircle,
 } from "lucide-react";
 
@@ -99,37 +100,35 @@ export default function FilePreview() {
             className="space-y-6"
         >
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <Link
-                        to="/dashboard/workspace"
-                        className="mb-4 inline-flex items-center gap-2 text-sm text-cyan-500 hover:underline"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Workspace
-                    </Link>
+            <div>
+                <Link
+                    to="/dashboard/workspace"
+                    className="mb-4 inline-flex items-center gap-2 text-sm text-cyan-500 hover:underline"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Workspace
+                </Link>
 
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-green-500/10 p-3">
-                            <FileSpreadsheet className="h-8 w-8 text-green-500" />
-                        </div>
+                <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-green-500/10 p-3">
+                        <FileSpreadsheet className="h-8 w-8 text-green-500" />
+                    </div>
 
-                        <div>
-                            <h1 className="text-3xl font-bold">
-                                {preview.filename}
-                            </h1>
+                    <div>
+                        <h1 className="text-3xl font-bold">
+                            {preview.filename}
+                        </h1>
 
-                            <p className="text-muted-foreground">
-                                {preview.file_type}
-                            </p>
-                        </div>
+                        <p className="text-muted-foreground">
+                            {preview.file_type}
+                        </p>
                     </div>
                 </div>
             </div>
 
             {/* File Information */}
             <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl border bg-card p-5">
+                <div className="rounded-2xl border border-border bg-card p-5">
                     <p className="text-sm text-muted-foreground">
                         Sheet
                     </p>
@@ -139,7 +138,7 @@ export default function FilePreview() {
                     </h3>
                 </div>
 
-                <div className="rounded-xl border bg-card p-5">
+                <div className="rounded-2xl border border-border bg-card p-5">
                     <p className="text-sm text-muted-foreground">
                         Columns
                     </p>
@@ -149,37 +148,44 @@ export default function FilePreview() {
                     </h3>
                 </div>
 
-                <div className="rounded-xl border bg-card p-5">
+                <div className="rounded-2xl border border-border bg-card p-5">
                     <p className="text-sm text-muted-foreground">
                         Rows
                     </p>
 
                     <h3 className="mt-2 text-xl font-semibold">
-                        {preview.rows.length}
+                        {preview.rows.length.toLocaleString()}
                     </h3>
                 </div>
             </div>
 
-            {/* Excel Preview */}
-            <div className="overflow-hidden rounded-2xl border bg-card">
-                <div className="border-b px-6 py-4">
-                    <h2 className="text-lg font-semibold">
+            {/* Spreadsheet */}
+            <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+
+                <div className="border-b border-border px-6 py-5">
+                    <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+                        <Table2 className="h-5 w-5 text-cyan-500" />
                         Spreadsheet Preview
                     </h2>
+
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Browse, search and inspect spreadsheet data.
+                    </p>
                 </div>
 
-                <div className="p-4">
-                    {preview.rows?.length > 0 ? (
+                <div className="p-6">
+                    {preview.rows.length ? (
                         <ExcelGrid
                             columns={preview.columns}
                             rows={preview.rows}
                         />
                     ) : (
                         <div className="py-20 text-center text-muted-foreground">
-                            No data found.
+                            No spreadsheet data available.
                         </div>
                     )}
                 </div>
+
             </div>
         </motion.div>
     );

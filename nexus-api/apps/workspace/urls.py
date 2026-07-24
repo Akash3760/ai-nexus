@@ -6,6 +6,7 @@ from .views import (
     RecentActivityView,
     FileUploadView,
     FilePreviewView,
+    FileDeleteView,
 )
 
 urlpatterns = [
@@ -23,6 +24,11 @@ urlpatterns = [
         "files/<int:pk>/preview/",
         FilePreviewView.as_view(),
         name="file-preview",
+    ),
+    path(
+        "files/<int:pk>/",
+        FileDeleteView.as_view(),
+        name="file-delete",
     ),
     path(
         "activity/",

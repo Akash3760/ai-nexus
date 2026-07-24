@@ -173,3 +173,38 @@ class FilePreviewView(APIView):
                 {"detail": str(e)},
                 status=500,
             )
+
+
+class FileDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        file = get_object_or_404(
+            UploadedFile,
+            pk=pk,
+            uploaded_by=request.user,
+        )
+
+        workspace = file.workspace
+        filename = file.filename
+
+        # Delete the physical file (if it exists)
+        if file.file:
+            file.file.delete(save=False)
+
+        # Delete the database record
+        file.delete()
+
+        # Log the activity
+        Activity.objects.create(
+            workspace=workspace,
+            user=request.user,
+            action=Activity.Action.DELETE,
+            title="File Deleted",
+            message=filename,
+        )
+
+        return Response(
+            {"detail": "File deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT,
+        )

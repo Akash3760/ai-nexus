@@ -1,0 +1,213 @@
+/* ==========================================================================
+   AI Nexus - AG Grid Theme
+   ========================================================================== */
+
+.ag-theme-quartz {
+    /* Typography */
+    --ag-font-family: "Geist Variable", sans-serif;
+    --ag-font-size: 14px;
+
+    /* Colors */
+    --ag-background-color: var(--background);
+    --ag-foreground-color: var(--foreground);
+
+    --ag-header-background-color: var(--card);
+    --ag-header-foreground-color: var(--foreground);
+
+    --ag-border-color: var(--border);
+
+    --ag-input-background-color: var(--background);
+    --ag-input-border-color: var(--border);
+
+    --ag-row-hover-color: color-mix(in srgb, var(--accent) 35%, transparent);
+
+    --ag-selected-row-background-color: color-mix(in srgb,
+            var(--primary) 15%,
+            transparent);
+
+    --ag-range-selection-background-color: color-mix(in srgb,
+            var(--primary) 10%,
+            transparent);
+
+    --ag-header-height: 52px;
+    --ag-row-height: 46px;
+    --ag-list-item-height: 40px;
+
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+
+.ag-theme-quartz .ag-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.ag-theme-quartz .ag-header-cell {
+    padding-inline: 14px;
+    font-weight: 600;
+    transition: background .2s;
+}
+
+.ag-theme-quartz .ag-header-cell:hover {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.ag-theme-quartz .ag-header-cell-label {
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Rows
+   ========================================================================== */
+
+.ag-theme-quartz .ag-row {
+    transition: background-color .18s ease;
+}
+
+.ag-theme-quartz .ag-row-even {
+    background: var(--card);
+}
+
+.ag-theme-quartz .ag-row-odd {
+    background: var(--background);
+}
+
+.ag-theme-quartz .ag-row-hover {
+    background: var(--ag-row-hover-color) !important;
+}
+
+/* ==========================================================================
+   Cells
+   ========================================================================== */
+
+.ag-theme-quartz .ag-cell {
+    border-right: 1px solid var(--border);
+
+    display: flex;
+    align-items: center;
+
+    overflow: hidden;
+}
+
+.ag-theme-quartz .ag-cell:last-child {
+    border-right: none;
+}
+
+.ag-theme-quartz .ag-cell-value {
+    width: 100%;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   Floating Filters
+   ========================================================================== */
+
+.ag-theme-quartz .ag-floating-filter {
+    background: var(--card);
+}
+
+.ag-theme-quartz .ag-floating-filter-input input {
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--foreground);
+    padding: 0 10px;
+}
+
+.ag-theme-quartz .ag-floating-filter-input input:focus {
+    outline: none;
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px color-mix(in srgb,
+            var(--primary) 15%,
+            transparent);
+}
+
+/* ==========================================================================
+   Menus
+   ========================================================================== */
+
+.ag-theme-quartz .ag-menu,
+.ag-theme-quartz .ag-popup {
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   Pagination
+   ========================================================================== */
+
+.ag-theme-quartz .ag-paging-panel {
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    min-height: 58px;
+    padding: 12px 18px;
+}
+
+.ag-theme-quartz .ag-paging-button {
+    border-radius: 10px;
+    transition: background .2s;
+}
+
+.ag-theme-quartz .ag-paging-button:hover {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* ==========================================================================
+   Scrollbars
+   ========================================================================== */
+
+.ag-theme-quartz ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.ag-theme-quartz ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ag-theme-quartz ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+}
+
+.ag-theme-quartz ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+}
+
+/* ==========================================================================
+   Focus
+   ========================================================================== */
+
+.ag-theme-quartz .ag-cell-focus,
+.ag-theme-quartz .ag-cell-range-selected {
+    outline: none !important;
+}
+
+/* ==========================================================================
+   Dark Mode
+   ========================================================================== */
+
+.dark .ag-theme-quartz {
+    --ag-background-color: var(--background);
+    --ag-foreground-color: var(--foreground);
+
+    --ag-header-background-color: var(--card);
+
+    --ag-row-hover-color: color-mix(in srgb,
+            var(--accent) 45%,
+            transparent);
+
+    --ag-selected-row-background-color: color-mix(in srgb,
+            var(--primary) 18%,
+            transparent);
+}
