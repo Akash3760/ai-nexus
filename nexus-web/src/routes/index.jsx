@@ -10,9 +10,11 @@ import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/dashboard/Dashboard";
+import NotFound from "@/pages/NotFound";
+
 import Workspace from "@/features/workspace/pages/Workspace";
 import FilePreview from "@/features/workspace/pages/FilePreview";
-import NotFound from "@/pages/NotFound";
+import Settings from "@/features/settings/pages/Settings";
 
 const router = createBrowserRouter([
     // Public
@@ -43,7 +45,7 @@ const router = createBrowserRouter([
         ],
     },
 
-    // Protected Dashboard
+    // Protected
     {
         path: "/dashboard",
         element: (
@@ -57,18 +59,21 @@ const router = createBrowserRouter([
                 element: <Dashboard />,
             },
 
-            // Workspace Dashboard
+            // Settings
+            {
+                path: "settings",
+                element: <Settings />,
+            },
+
+            // Workspace
             {
                 path: "workspace",
                 element: <Workspace />,
             },
-
             {
                 path: "workspace/files/:id",
                 element: <FilePreview />,
             },
-
-            // Temporary routes (point to Workspace)
             {
                 path: "workspace/upload",
                 element: <Workspace />,
