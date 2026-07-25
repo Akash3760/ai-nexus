@@ -18,6 +18,8 @@ export default function Register() {
     const [formData,
         setFormData] =
         useState({
+            first_name: "",
+            last_name: "",
             username: "",
             email: "",
             password: "",
@@ -66,6 +68,12 @@ export default function Register() {
                 setLoading(true);
 
                 await register({
+                    first_name:
+                        formData.first_name,
+
+                    last_name:
+                        formData.last_name,
+
                     username:
                         formData.username,
 
@@ -143,6 +151,36 @@ export default function Register() {
             )}
 
             <div className="mt-8 space-y-6">
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <FloatingInput
+                        label="First Name"
+                        name="first_name"
+                        value={formData.first_name}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        onClear={() =>
+                            setFormData((prev) => ({
+                                ...prev,
+                                first_name: "",
+                            }))
+                        }
+                    />
+
+                    <FloatingInput
+                        label="Last Name"
+                        name="last_name"
+                        value={formData.last_name}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        onClear={() =>
+                            setFormData((prev) => ({
+                                ...prev,
+                                last_name: "",
+                            }))
+                        }
+                    />
+                </div>
 
                 <FloatingInput
                     label="Username"
