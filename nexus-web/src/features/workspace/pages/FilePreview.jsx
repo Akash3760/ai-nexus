@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import {
     ArrowLeft,
     FileSpreadsheet,
+    FileText,
+    Image as ImageIcon,
+    File,
     Loader2,
     Table2,
     AlertCircle,
@@ -92,6 +95,19 @@ export default function FilePreview() {
 
     if (!preview) return null;
 
+    const type = preview.preview_type;
+
+    const icon =
+        type === "spreadsheet" ? (
+            <FileSpreadsheet className="h-8 w-8 text-green-500" />
+        ) : type === "pdf" ? (
+            <FileText className="h-8 w-8 text-red-500" />
+        ) : type === "image" ? (
+            <ImageIcon className="h-8 w-8 text-violet-500" />
+        ) : (
+            <File className="h-8 w-8 text-slate-500" />
+        );
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -99,7 +115,6 @@ export default function FilePreview() {
             transition={{ duration: 0.3 }}
             className="space-y-6"
         >
-            {/* Header */}
             <div>
                 <Link
                     to="/dashboard/workspace"
@@ -110,8 +125,8 @@ export default function FilePreview() {
                 </Link>
 
                 <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-green-500/10 p-3">
-                        <FileSpreadsheet className="h-8 w-8 text-green-500" />
+                    <div className="rounded-xl bg-muted p-3">
+                        {icon}
                     </div>
 
                     <div>
@@ -126,67 +141,106 @@ export default function FilePreview() {
                 </div>
             </div>
 
-            {/* File Information */}
-            <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-border bg-card p-5">
-                    <p className="text-sm text-muted-foreground">
-                        Sheet
-                    </p>
+            {type === "spreadsheet" && (
+                <>
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <div className="rounded-2xl border bg-card p-5">
+                            <p className="text-sm text-muted-foreground">
+                                Sheet
+                            </p>
 
-                    <h3 className="mt-2 text-xl font-semibold">
-                        {preview.sheet_name}
-                    </h3>
-                </div>
+                            <h3 className="mt-2 text-xl font-semibold">
+                                {preview.sheet_name}
+                            </h3>
+                        </div>
 
-                <div className="rounded-2xl border border-border bg-card p-5">
-                    <p className="text-sm text-muted-foreground">
-                        Columns
-                    </p>
+                        <div className="rounded-2xl border bg-card p-5">
+                            <p className="text-sm text-muted-foreground">
+                                Columns
+                            </p>
 
-                    <h3 className="mt-2 text-xl font-semibold">
-                        {preview.columns.length}
-                    </h3>
-                </div>
+                            <h3 className="mt-2 text-xl font-semibold">
+                                {preview.columns.length}
+                            </h3>
+                        </div>
 
-                <div className="rounded-2xl border border-border bg-card p-5">
-                    <p className="text-sm text-muted-foreground">
-                        Rows
-                    </p>
+                        <div className="rounded-2xl border bg-card p-5">
+                            <p className="text-sm text-muted-foreground">
+                                Rows
+                            </p>
 
-                    <h3 className="mt-2 text-xl font-semibold">
-                        {preview.rows.length.toLocaleString()}
-                    </h3>
-                </div>
-            </div>
+                            <h3 className="mt-2 text-xl font-semibold">
+                                {preview.rows.length}
+                            </h3>
+                        </div>
+                    </div>
 
-            {/* Spreadsheet */}
-            <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+                    <div className="overflow-hidden rounded-3xl border bg-card">
+                        <div className="border-b px-6 py-5">
+                            <h2 className="flex items-center gap-2 text-xl font-semibold">
+                                <Table2 className="h-5 w-5 text-cyan-500" />
+                                Spreadsheet Preview
+                            </h2>
+                        </div>
 
-                <div className="border-b border-border px-6 py-5">
-                    <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-                        <Table2 className="h-5 w-5 text-cyan-500" />
-                        Spreadsheet Preview
+                        <div className="p-6">
+                            <ExcelGrid
+                                columns={preview.columns}
+                                rows={preview.rows}
+                            />
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {type === "pdf" && (
+                <div className="rounded-3xl border bg-card p-6">
+                    <h2 className="mb-4 text-xl font-semibold">
+                        PDF Preview ({preview.page_count} pages)
                     </h2>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Browse, search and inspect spreadsheet data.
+                    <div className="space-y-6">
+                        {preview.pages.map((page, index) => (
+                            <div
+                                key={index}
+                                className="rounded-xl border bg-muted/30 p-5"
+                            >
+                                <h3 className="mb-3 font-semibold">
+                                    Page {index + 1}
+                                </h3>
+
+                                <pre className="whitespace-pre-wrap font-sans text-sm">
+                                    {page || "(No text found on this page)"}
+                                </pre>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {type === "image" && (
+                <div className="rounded-3xl border bg-card p-6">
+                    <img
+                        src={preview.image_url}
+                        alt={preview.filename}
+                        className="mx-auto max-h-[700px] rounded-xl"
+                    />
+                </div>
+            )}
+
+            {type === "unsupported" && (
+                <div className="rounded-2xl border bg-card p-10 text-center">
+                    <File className="mx-auto h-12 w-12 text-muted-foreground" />
+
+                    <h2 className="mt-4 text-xl font-semibold">
+                        Preview not available
+                    </h2>
+
+                    <p className="mt-2 text-muted-foreground">
+                        {preview.message}
                     </p>
                 </div>
-
-                <div className="p-6">
-                    {preview.rows.length ? (
-                        <ExcelGrid
-                            columns={preview.columns}
-                            rows={preview.rows}
-                        />
-                    ) : (
-                        <div className="py-20 text-center text-muted-foreground">
-                            No spreadsheet data available.
-                        </div>
-                    )}
-                </div>
-
-            </div>
+            )}
         </motion.div>
     );
 }

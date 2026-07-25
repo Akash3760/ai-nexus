@@ -1,11 +1,6 @@
 from rest_framework import serializers
 
-from .models import (
-    Workspace,
-    UploadedFile,
-    AIJob,
-    Activity,
-)
+from .models import Activity, AIJob, UploadedFile, Workspace
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):

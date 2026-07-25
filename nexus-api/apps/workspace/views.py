@@ -1,34 +1,27 @@
 import os
-import pandas as pd
+import traceback
 
+import fitz
+import pandas as pd
 from django.shortcuts import get_object_or_404
+from django.urls import path
 from rest_framework import generics, status
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import (
-    Workspace,
-    UploadedFile,
-    Activity,
-    AIJob,
-)
-
-from .serializers import (
-    UploadedFileSerializer,
-    ActivitySerializer,
-)
+from .models import Activity, AIJob, UploadedFile, Workspace
+from .serializers import ActivitySerializer, UploadedFileSerializer
 
 # Create your views here.
+
 
 class WorkspaceStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        workspace = Workspace.objects.filter(
-            owner=request.user
-        ).first()
+        workspace = Workspace.objects.filter(owner=request.user).first()
 
         if not workspace:
             return Response(
@@ -45,9 +38,7 @@ class WorkspaceStatsView(APIView):
             "completed_jobs": workspace.jobs.filter(
                 status=AIJob.Status.COMPLETED
             ).count(),
-            "running_jobs": workspace.jobs.filter(
-                status=AIJob.Status.RUNNING
-            ).count(),
+            "running_jobs": workspace.jobs.filter(status=AIJob.Status.RUNNING).count(),
             "total_activities": workspace.activities.count(),
         }
 
@@ -59,9 +50,9 @@ class RecentFilesView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return UploadedFile.objects.filter(
-            uploaded_by=self.request.user
-        ).order_by("-created_at")
+        return UploadedFile.objects.filter(uploaded_by=self.request.user).order_by(
+            "-created_at"
+        )
 
 
 class RecentActivityView(generics.ListAPIView):
@@ -69,9 +60,7 @@ class RecentActivityView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Activity.objects.filter(
-            user=self.request.user
-        ).order_by("-created_at")
+        return Activity.objects.filter(user=self.request.user).order_by("-created_at")
 
 
 class FileUploadView(APIView):
@@ -97,13 +86,33 @@ class FileUploadView(APIView):
             },
         )
 
+        # Determine a simplified file type
+        extension = os.path.splitext(uploaded_file.name)[1].lower()
+
+        if extension in [".xlsx", ".xls", ".csv"]:
+            file_type = "spreadsheet"
+        elif extension == ".pdf":
+            file_type = "pdf"
+        elif extension in [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".bmp",
+            ".svg",
+        ]:
+            file_type = "image"
+        else:
+            file_type = "document"
+
         file = UploadedFile.objects.create(
             workspace=workspace,
             uploaded_by=request.user,
             file=uploaded_file,
             filename=uploaded_file.name,
             size=uploaded_file.size,
-            file_type=uploaded_file.content_type,
+            file_type=file_type,
             status=UploadedFile.Status.READY,
         )
 
@@ -137,41 +146,131 @@ class FilePreviewView(APIView):
         extension = os.path.splitext(path)[1].lower()
 
         try:
-
+            # Excel
             if extension in [".xlsx", ".xls"]:
-
                 df = pd.read_excel(path)
+                df = df.fillna("")
 
+                return Response(
+                    {
+                        "preview_type": "spreadsheet",
+                        "filename": file.filename,
+                        "file_type": file.file_type,
+                        "sheet_name": "Sheet1",
+                        "columns": list(df.columns),
+                        "rows": df.values.tolist(),
+                        "page_count": None,
+                        "pages": [],
+                        "image_url": None,
+                        "message": None,
+                    }
+                )
+
+            # CSV
             elif extension == ".csv":
-
                 df = pd.read_csv(path)
+                df = df.fillna("")
 
+                return Response(
+                    {
+                        "preview_type": "spreadsheet",
+                        "filename": file.filename,
+                        "file_type": file.file_type,
+                        "sheet_name": "Sheet1",
+                        "columns": list(df.columns),
+                        "rows": df.values.tolist(),
+                        "page_count": None,
+                        "pages": [],
+                        "image_url": None,
+                        "message": None,
+                    }
+                )
+
+            # PDF
+            elif extension == ".pdf":
+                doc = fitz.open(path)
+
+                pages = []
+
+                for page in doc:
+                    pages.append(page.get_text("text"))
+
+                doc.close()
+
+                return Response(
+                    {
+                        "preview_type": "pdf",
+                        "filename": file.filename,
+                        "file_type": file.file_type,
+                        "sheet_name": None,
+                        "columns": [],
+                        "rows": [],
+                        "page_count": len(pages),
+                        "pages": pages,
+                        "image_url": None,
+                        "message": None,
+                    }
+                )
+
+            # Images
+            elif extension in [
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".gif",
+                ".bmp",
+                ".webp",
+                ".svg",
+            ]:
+                return Response(
+                    {
+                        "preview_type": "image",
+                        "filename": file.filename,
+                        "file_type": file.file_type,
+                        "sheet_name": None,
+                        "columns": [],
+                        "rows": [],
+                        "page_count": None,
+                        "pages": [],
+                        "image_url": request.build_absolute_uri(file.file.url),
+                        "message": None,
+                    }
+                )
+
+            # Unsupported
             else:
                 return Response(
                     {
+                        "preview_type": "unsupported",
                         "filename": file.filename,
                         "file_type": file.file_type,
-                        "message": "Preview not available for this file type.",
-                    },
-                    status=400,
+                        "sheet_name": None,
+                        "columns": [],
+                        "rows": [],
+                        "page_count": None,
+                        "pages": [],
+                        "image_url": None,
+                        "message": "Preview is not available for this file type.",
+                    }
                 )
 
-            df = df.fillna("")
+        except Exception as e:
+            traceback.print_exc()
 
             return Response(
                 {
+                    "preview_type": "error",
+                    "detail": str(e),
                     "filename": file.filename,
-                    "file_type": "spreadsheet",
-                    "sheet_name": "Sheet1",
-                    "columns": list(df.columns),
-                    "rows": df.values.tolist(),
-                }
-            )
-
-        except Exception as e:
-            return Response(
-                {"detail": str(e)},
-                status=500,
+                    "file_type": file.file_type,
+                    "sheet_name": None,
+                    "columns": [],
+                    "rows": [],
+                    "page_count": None,
+                    "pages": [],
+                    "image_url": None,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 

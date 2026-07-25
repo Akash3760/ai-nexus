@@ -1,12 +1,12 @@
 from django.urls import path
 
 from .views import (
-    WorkspaceStatsView,
-    RecentFilesView,
-    RecentActivityView,
-    FileUploadView,
-    FilePreviewView,
     FileDeleteView,
+    FilePreviewView,
+    FileUploadView,
+    RecentActivityView,
+    RecentFilesView,
+    WorkspaceStatsView,
 )
 
 urlpatterns = [
