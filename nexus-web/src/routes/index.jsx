@@ -14,6 +14,7 @@ import NotFound from "@/pages/NotFound";
 
 import Workspace from "@/features/workspace/pages/Workspace";
 import FilePreview from "@/features/workspace/pages/FilePreview";
+import AISummary from "@/features/workspace/pages/AISummary";
 import Settings from "@/features/settings/pages/Settings";
 
 const router = createBrowserRouter([
@@ -73,6 +74,10 @@ const router = createBrowserRouter([
             {
                 path: "workspace/files/:id",
                 element: <FilePreview />,
+            },
+            {
+                path: "workspace/files/:id/summary",
+                element: <AISummary />,
             },
             {
                 path: "workspace/upload",

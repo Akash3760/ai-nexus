@@ -30,6 +30,12 @@ export default function FileActions({
 }) {
     const navigate = useNavigate();
 
+    if (!file) {
+        return null;
+    }
+
+    const fileId = file.id;
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -37,6 +43,7 @@ export default function FileActions({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
+                    aria-label="File actions"
                 >
                     <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -52,15 +59,19 @@ export default function FileActions({
 
                 <DropdownMenuSeparator />
 
+                {/* Preview */}
                 <DropdownMenuItem
                     onClick={() =>
-                        navigate(`/dashboard/workspace/file/${file.id}`)
+                        navigate(
+                            `/dashboard/workspace/files/${fileId}`
+                        )
                     }
                 >
                     <Eye className="mr-2 h-4 w-4" />
                     Preview
                 </DropdownMenuItem>
 
+                {/* Download */}
                 <DropdownMenuItem
                     onClick={() => onDownload?.(file)}
                 >
@@ -70,45 +81,60 @@ export default function FileActions({
 
                 <DropdownMenuSeparator />
 
+                {/* AI Summary */}
                 <DropdownMenuItem
                     onClick={() =>
-                        navigate(`/dashboard/workspace/file/${file.id}/summary`)
+                        navigate(
+                            `/dashboard/workspace/files/${fileId}/summary`
+                        )
                     }
                 >
                     <Sparkles className="mr-2 h-4 w-4 text-cyan-500" />
                     AI Summary
                 </DropdownMenuItem>
 
+                {/* Data Cleaning */}
                 <DropdownMenuItem
                     onClick={() =>
-                        navigate(`/dashboard/workspace/file/${file.id}/clean`)
+                        navigate(
+                            `/dashboard/workspace/files/${fileId}/clean`
+                        )
                     }
                 >
                     <BrushCleaning className="mr-2 h-4 w-4 text-emerald-500" />
                     Data Cleaning
                 </DropdownMenuItem>
 
+                {/* Duplicate Detection */}
                 <DropdownMenuItem
                     onClick={() =>
-                        navigate(`/dashboard/workspace/file/${file.id}/duplicates`)
+                        navigate(
+                            `/dashboard/workspace/files/${fileId}/duplicates`
+                        )
                     }
                 >
                     <CopyCheck className="mr-2 h-4 w-4 text-amber-500" />
                     Duplicate Detection
                 </DropdownMenuItem>
 
+                {/* AI Insights */}
                 <DropdownMenuItem
                     onClick={() =>
-                        navigate(`/dashboard/workspace/file/${file.id}/insights`)
+                        navigate(
+                            `/dashboard/workspace/files/${fileId}/insights`
+                        )
                     }
                 >
                     <BarChart3 className="mr-2 h-4 w-4 text-violet-500" />
                     AI Insights
                 </DropdownMenuItem>
 
+                {/* Chat */}
                 <DropdownMenuItem
                     onClick={() =>
-                        navigate(`/dashboard/workspace/file/${file.id}/chat`)
+                        navigate(
+                            `/dashboard/workspace/files/${fileId}/chat`
+                        )
                     }
                 >
                     <MessageSquare className="mr-2 h-4 w-4 text-blue-500" />
@@ -117,6 +143,7 @@ export default function FileActions({
 
                 <DropdownMenuSeparator />
 
+                {/* Delete */}
                 <DropdownMenuItem
                     className="text-red-600 focus:text-red-600"
                     onClick={() => onDelete?.(file)}
