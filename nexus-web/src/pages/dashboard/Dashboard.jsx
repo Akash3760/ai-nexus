@@ -17,6 +17,7 @@ import {
     Plus,
     Zap,
     Cpu,
+    Camera,
 } from "lucide-react";
 
 import useAuthStore from "@/store/authStore";
@@ -56,6 +57,13 @@ const modules = [
             "Analyze files, generate reports, explore insights, and access AI-powered productivity tools.",
         icon: BrainCircuit,
         to: "/dashboard/workspace",
+    },
+    {
+        title: "Vision Studio",
+        description:
+            "Use your camera for real-time AI vision, hand tracking, gestures, and interactive experiences.",
+        icon: Camera,
+        to: "/dashboard/vision",
     },
     {
         title: "Workflows",

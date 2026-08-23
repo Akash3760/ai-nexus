@@ -15,6 +15,7 @@ import NotFound from "@/pages/NotFound";
 import Workspace from "@/features/workspace/pages/Workspace";
 import FilePreview from "@/features/workspace/pages/FilePreview";
 import AISummary from "@/features/workspace/pages/AISummary";
+import VisionStudio from "@/features/vision/pages/VisionStudio";
 import Settings from "@/features/settings/pages/Settings";
 
 const router = createBrowserRouter([
@@ -64,6 +65,12 @@ const router = createBrowserRouter([
             {
                 path: "settings",
                 element: <Settings />,
+            },
+
+            // AI Vision
+            {
+                path: "vision",
+                element: <VisionStudio />,
             },
 
             // Workspace

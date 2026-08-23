@@ -1,10 +1,10 @@
 import api from "@/api/axios";
 
 /* =========================
-   Spreadsheet AI
+   File AI Summary
 ========================= */
 
-export async function generateSpreadsheetSummary(fileId) {
+export async function generateFileSummary(fileId) {
     const { data } = await api.post(
         `ai/files/${fileId}/summary/`
     );

@@ -14,6 +14,7 @@ import {
     BarChart3,
     Users,
     Settings,
+    Camera,
     LogOut,
     Sparkles,
     PanelLeftClose,
@@ -38,6 +39,11 @@ const navItems = [
         title: "AI Workspace",
         icon: Bot,
         to: "/dashboard/workspace",
+    },
+    {
+        title: "Vision Studio",
+        icon: Camera,
+        to: "/dashboard/vision",
     },
     {
         title: "Workflows",
