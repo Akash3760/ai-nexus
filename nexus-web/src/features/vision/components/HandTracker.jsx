@@ -11,7 +11,7 @@ import {
 } from "@mediapipe/tasks-vision";
 
 /* =========================================================
-   MediaPipe configuration
+   MEDIAPIPE
 ========================================================= */
 
 const WASM_PATH = "/mediapipe/wasm";
@@ -20,7 +20,7 @@ const MODEL_PATH =
     "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
 /* =========================================================
-   Hand connections
+   HAND CONNECTIONS
 ========================================================= */
 
 const HAND_CONNECTIONS = [
@@ -53,7 +53,252 @@ const HAND_CONNECTIONS = [
 ];
 
 /* =========================================================
-   HandTracker
+   GESTURE THRESHOLDS
+========================================================= */
+
+const PINCH_START = 0.075;
+const PINCH_END = 0.095;
+
+/*
+ * IMPORTANT:
+ *
+ * This is intentionally high.
+ *
+ * The old value 0.32 caused noticeable lag.
+ *
+ * We want the portal to feel attached to the hand.
+ */
+const POSITION_SMOOTHING = 0.78;
+
+/*
+ * Size can be slightly smoother than position.
+ */
+const SIZE_SMOOTHING = 0.45;
+
+/* =========================================================
+   DISTANCE
+========================================================= */
+
+function distance(a, b) {
+    if (!a || !b) {
+        return 1;
+    }
+
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    const dz = (a.z || 0) - (b.z || 0);
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy +
+        dz * dz
+    );
+}
+
+/* =========================================================
+   PALM CENTER
+========================================================= */
+
+function getPalmCenter(landmarks) {
+    if (!landmarks || landmarks.length < 21) {
+        return null;
+    }
+
+    /*
+     * Wrist + MCP joints.
+     *
+     * This is much more stable than using
+     * the index fingertip.
+     */
+    const indexes = [
+        0,
+        5,
+        9,
+        13,
+        17,
+    ];
+
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    let count = 0;
+
+    for (const index of indexes) {
+        const point = landmarks[index];
+
+        if (!point) {
+            continue;
+        }
+
+        x += point.x;
+        y += point.y;
+        z += point.z || 0;
+
+        count++;
+    }
+
+    if (!count) {
+        return null;
+    }
+
+    return {
+        x: x / count,
+        y: y / count,
+        z: z / count,
+    };
+}
+
+/* =========================================================
+   FINGER EXTENSION
+========================================================= */
+
+function isFingerExtended(
+    landmarks,
+    tipIndex,
+    pipIndex
+) {
+    const tip = landmarks[tipIndex];
+    const pip = landmarks[pipIndex];
+
+    if (!tip || !pip) {
+        return false;
+    }
+
+    return tip.y < pip.y;
+}
+
+/* =========================================================
+   GESTURE
+========================================================= */
+
+function detectGesture(
+    landmarks,
+    previousPinching = false
+) {
+    if (!landmarks || landmarks.length < 21) {
+        return {
+            gesture: "none",
+            pinchDistance: 1,
+            isPinching: false,
+        };
+    }
+
+    const thumbTip = landmarks[4];
+    const indexTip = landmarks[8];
+
+    const pinchDistance = distance(
+        thumbTip,
+        indexTip
+    );
+
+    /*
+     * Hysteresis.
+     *
+     * Start:
+     *     0.075
+     *
+     * Release:
+     *     0.095
+     *
+     * This prevents flickering.
+     */
+    const isPinching = previousPinching
+        ? pinchDistance < PINCH_END
+        : pinchDistance < PINCH_START;
+
+    if (isPinching) {
+        return {
+            gesture: "pinch",
+            pinchDistance,
+            isPinching: true,
+        };
+    }
+
+    const indexExtended =
+        isFingerExtended(
+            landmarks,
+            8,
+            6
+        );
+
+    const middleExtended =
+        isFingerExtended(
+            landmarks,
+            12,
+            10
+        );
+
+    const ringExtended =
+        isFingerExtended(
+            landmarks,
+            16,
+            14
+        );
+
+    const pinkyExtended =
+        isFingerExtended(
+            landmarks,
+            20,
+            18
+        );
+
+    /*
+     * Open palm
+     */
+    if (
+        indexExtended &&
+        middleExtended &&
+        ringExtended &&
+        pinkyExtended
+    ) {
+        return {
+            gesture: "open_palm",
+            pinchDistance,
+            isPinching: false,
+        };
+    }
+
+    /*
+     * Two fingers
+     */
+    if (
+        indexExtended &&
+        middleExtended &&
+        !ringExtended &&
+        !pinkyExtended
+    ) {
+        return {
+            gesture: "two_fingers",
+            pinchDistance,
+            isPinching: false,
+        };
+    }
+
+    /*
+     * Point
+     */
+    if (
+        indexExtended &&
+        !middleExtended &&
+        !ringExtended &&
+        !pinkyExtended
+    ) {
+        return {
+            gesture: "point",
+            pinchDistance,
+            isPinching: false,
+        };
+    }
+
+    return {
+        gesture: "none",
+        pinchDistance,
+        isPinching: false,
+    };
+}
+
+/* =========================================================
+   HAND TRACKER
 ========================================================= */
 
 export default function HandTracker({
@@ -61,37 +306,85 @@ export default function HandTracker({
     enabled = false,
     onResults,
 }) {
-    const landmarkerRef = useRef(null);
+    const landmarkerRef =
+        useRef(null);
 
-    const animationRef = useRef(null);
+    const animationRef =
+        useRef(null);
 
-    const canvasRef = useRef(null);
+    const canvasRef =
+        useRef(null);
 
-    const lastVideoTimeRef = useRef(-1);
+    const onResultsRef =
+        useRef(onResults);
 
-    const mountedRef = useRef(true);
-
-    const onResultsRef = useRef(onResults);
-
-    const [ready, setReady] = useState(false);
-
-    const [error, setError] = useState("");
+    const lastVideoTimeRef =
+        useRef(-1);
 
     /* =======================================================
-       Keep callback stable
+       INTERACTION STATE
+    ======================================================= */
+
+    const handStateRef =
+        useRef({
+            /*
+             * One-hand pinch state
+             */
+            oneHandPinching: false,
+
+            /*
+             * Two-hand pinch state
+             */
+            hand1Pinching: false,
+            hand2Pinching: false,
+
+            /*
+             * Portal grabbed
+             */
+            grabbed: false,
+
+            /*
+             * Smoothed portal position
+             */
+            smoothX: 0.5,
+            smoothY: 0.5,
+
+            /*
+             * Previous hand distance
+             */
+            lastTwoHandDistance: null,
+
+            /*
+             * Current portal scale
+             */
+            scale: 1,
+
+            /*
+             * Last timestamp
+             */
+            lastFrameTime: 0,
+        });
+
+    const [ready, setReady] =
+        useState(false);
+
+    const [error, setError] =
+        useState("");
+
+    /* =======================================================
+       CALLBACK
     ======================================================= */
 
     useEffect(() => {
-        onResultsRef.current = onResults;
+        onResultsRef.current =
+            onResults;
     }, [onResults]);
 
     /* =======================================================
-       Initialize MediaPipe
+       INITIALIZE MEDIAPIPE
     ======================================================= */
 
     useEffect(() => {
-        mountedRef.current = true;
-
         let cancelled = false;
 
         async function initialize() {
@@ -115,21 +408,27 @@ export default function HandTracker({
                                 modelAssetPath:
                                     MODEL_PATH,
 
+                                /*
+                                 * CPU is more compatible.
+                                 */
                                 delegate: "CPU",
                             },
 
                             runningMode: "VIDEO",
 
+                            /*
+                             * We need two hands.
+                             */
                             numHands: 2,
 
                             minHandDetectionConfidence:
-                                0.5,
+                                0.50,
 
                             minHandPresenceConfidence:
-                                0.5,
+                                0.50,
 
                             minTrackingConfidence:
-                                0.5,
+                                0.50,
                         }
                     );
 
@@ -168,13 +467,13 @@ export default function HandTracker({
         return () => {
             cancelled = true;
 
-            mountedRef.current = false;
-
             cancelAnimationFrame(
                 animationRef.current
             );
 
-            if (landmarkerRef.current) {
+            if (
+                landmarkerRef.current
+            ) {
                 landmarkerRef.current.close();
 
                 landmarkerRef.current =
@@ -186,130 +485,97 @@ export default function HandTracker({
     }, []);
 
     /* =======================================================
-       Clear canvas
+       CLEAR CANVAS
     ======================================================= */
 
-    const clearCanvas = useCallback(() => {
-        const canvas = canvasRef.current;
+    const clearCanvas =
+        useCallback(() => {
+            const canvas =
+                canvasRef.current;
 
-        if (!canvas) {
-            return;
-        }
+            if (!canvas) {
+                return;
+            }
 
-        const ctx =
-            canvas.getContext("2d");
+            const ctx =
+                canvas.getContext("2d");
 
-        if (!ctx) {
-            return;
-        }
+            if (!ctx) {
+                return;
+            }
 
-        ctx.clearRect(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
-    }, []);
-
-    /* =======================================================
-       Resize canvas
-    ======================================================= */
-
-    const resizeCanvas = useCallback(() => {
-        const video =
-            videoRef?.current;
-
-        const canvas =
-            canvasRef.current;
-
-        if (!video || !canvas) {
-            return;
-        }
-
-        const rect =
-            video.getBoundingClientRect();
-
-        if (
-            rect.width <= 0 ||
-            rect.height <= 0
-        ) {
-            return;
-        }
-
-        const dpr =
-            window.devicePixelRatio || 1;
-
-        canvas.width =
-            Math.round(
-                rect.width * dpr
-            );
-
-        canvas.height =
-            Math.round(
-                rect.height * dpr
-            );
-
-        canvas.style.width =
-            `${rect.width}px`;
-
-        canvas.style.height =
-            `${rect.height}px`;
-
-        const ctx =
-            canvas.getContext("2d");
-
-        if (!ctx) {
-            return;
-        }
-
-        ctx.setTransform(
-            dpr,
-            0,
-            0,
-            dpr,
-            0,
-            0
-        );
-    }, [videoRef]);
-
-    /* =======================================================
-       Draw point
-    ======================================================= */
-
-    const drawPoint = useCallback(
-        (
-            ctx,
-            x,
-            y,
-            radius = 3.5
-        ) => {
-            ctx.beginPath();
-
-            ctx.arc(
-                x,
-                y,
-                radius,
+            ctx.clearRect(
                 0,
-                Math.PI * 2
+                0,
+                canvas.width,
+                canvas.height
             );
-
-            ctx.fillStyle =
-                "#22d3ee";
-
-            ctx.fill();
-
-            ctx.lineWidth = 1.5;
-
-            ctx.strokeStyle =
-                "rgba(255,255,255,0.9)";
-
-            ctx.stroke();
-        },
-        []
-    );
+        }, []);
 
     /* =======================================================
-       Calculate camera/object-cover coordinates
+       RESIZE CANVAS
+    ======================================================= */
+
+    const resizeCanvas =
+        useCallback(() => {
+            const video =
+                videoRef?.current;
+
+            const canvas =
+                canvasRef.current;
+
+            if (!video || !canvas) {
+                return;
+            }
+
+            const rect =
+                video.getBoundingClientRect();
+
+            if (
+                rect.width <= 0 ||
+                rect.height <= 0
+            ) {
+                return;
+            }
+
+            const dpr =
+                window.devicePixelRatio || 1;
+
+            canvas.width =
+                Math.round(
+                    rect.width * dpr
+                );
+
+            canvas.height =
+                Math.round(
+                    rect.height * dpr
+                );
+
+            canvas.style.width =
+                `${rect.width}px`;
+
+            canvas.style.height =
+                `${rect.height}px`;
+
+            const ctx =
+                canvas.getContext("2d");
+
+            if (!ctx) {
+                return;
+            }
+
+            ctx.setTransform(
+                dpr,
+                0,
+                0,
+                dpr,
+                0,
+                0
+            );
+        }, [videoRef]);
+
+    /* =======================================================
+       COORDINATE MAPPER
     ======================================================= */
 
     const getCoordinateMapper =
@@ -337,21 +603,18 @@ export default function HandTracker({
                     videoHeight;
 
                 const containerAspect =
-                    width / height;
+                    width /
+                    height;
 
                 let renderedWidth;
-
                 let renderedHeight;
 
                 let offsetX = 0;
-
                 let offsetY = 0;
 
                 /*
-                 * Same object-cover calculation
-                 * used by the camera.
+                 * object-cover calculation.
                  */
-
                 if (
                     videoAspect >
                     containerAspect
@@ -383,33 +646,20 @@ export default function HandTracker({
                         ) / 2;
                 }
 
-                return (
-                    landmark
-                ) => {
+                return (landmark) => {
                     /*
                      * Camera is mirrored.
-                     *
-                     * MediaPipe:
-                     * 0 = left
-                     * 1 = right
-                     *
-                     * Mirrored camera:
-                     * invert X.
                      */
-
-                    const x =
-                        (1 - landmark.x) *
-                        renderedWidth +
-                        offsetX;
-
-                    const y =
-                        landmark.y *
-                        renderedHeight +
-                        offsetY;
-
                     return {
-                        x,
-                        y,
+                        x:
+                            (1 - landmark.x) *
+                            renderedWidth +
+                            offsetX,
+
+                        y:
+                            landmark.y *
+                            renderedHeight +
+                            offsetY,
                     };
                 };
             },
@@ -417,100 +667,641 @@ export default function HandTracker({
         );
 
     /* =======================================================
-       Draw one hand
+       DRAW POINT
     ======================================================= */
 
-    const drawHand = useCallback(
-        (
-            ctx,
-            landmarks,
-            mapper
-        ) => {
-            if (
-                !landmarks?.length ||
-                !mapper
-            ) {
-                return;
-            }
+    const drawPoint =
+        useCallback(
+            (
+                ctx,
+                x,
+                y,
+                radius = 3
+            ) => {
+                ctx.beginPath();
 
-            /* ------------------------------------------------
-               Connections
-            ------------------------------------------------ */
-
-            ctx.beginPath();
-
-            ctx.lineWidth = 2.5;
-
-            ctx.strokeStyle =
-                "#22d3ee";
-
-            ctx.lineCap =
-                "round";
-
-            ctx.lineJoin =
-                "round";
-
-            for (
-                const [
-                    startIndex,
-                    endIndex,
-                ] of HAND_CONNECTIONS
-            ) {
-                const start =
-                    landmarks[
-                    startIndex
-                    ];
-
-                const end =
-                    landmarks[
-                    endIndex
-                    ];
-
-                if (!start || !end) {
-                    continue;
-                }
-
-                const startPoint =
-                    mapper(start);
-
-                const endPoint =
-                    mapper(end);
-
-                ctx.moveTo(
-                    startPoint.x,
-                    startPoint.y
+                ctx.arc(
+                    x,
+                    y,
+                    radius,
+                    0,
+                    Math.PI * 2
                 );
 
-                ctx.lineTo(
-                    endPoint.x,
-                    endPoint.y
-                );
-            }
+                ctx.fillStyle =
+                    "#22d3ee";
 
-            ctx.stroke();
+                ctx.fill();
 
-            /* ------------------------------------------------
-               Landmarks
-            ------------------------------------------------ */
+                ctx.lineWidth = 1.5;
 
-            for (
-                const landmark of landmarks
-            ) {
-                const point =
-                    mapper(landmark);
+                ctx.strokeStyle =
+                    "rgba(255,255,255,0.9)";
 
-                drawPoint(
-                    ctx,
-                    point.x,
-                    point.y
-                );
-            }
-        },
-        [drawPoint]
-    );
+                ctx.stroke();
+            },
+            []
+        );
 
     /* =======================================================
-       Draw results
+       DRAW HAND
+    ======================================================= */
+
+    const drawHand =
+        useCallback(
+            (
+                ctx,
+                landmarks,
+                mapper
+            ) => {
+                if (
+                    !landmarks?.length ||
+                    !mapper
+                ) {
+                    return;
+                }
+
+                ctx.beginPath();
+
+                ctx.lineWidth = 2.2;
+
+                ctx.strokeStyle =
+                    "#22d3ee";
+
+                ctx.lineCap =
+                    "round";
+
+                ctx.lineJoin =
+                    "round";
+
+                for (
+                    const [
+                        startIndex,
+                        endIndex,
+                    ] of HAND_CONNECTIONS
+                ) {
+                    const start =
+                        landmarks[
+                        startIndex
+                        ];
+
+                    const end =
+                        landmarks[
+                        endIndex
+                        ];
+
+                    if (
+                        !start ||
+                        !end
+                    ) {
+                        continue;
+                    }
+
+                    const startPoint =
+                        mapper(start);
+
+                    const endPoint =
+                        mapper(end);
+
+                    ctx.moveTo(
+                        startPoint.x,
+                        startPoint.y
+                    );
+
+                    ctx.lineTo(
+                        endPoint.x,
+                        endPoint.y
+                    );
+                }
+
+                ctx.stroke();
+
+                /*
+                 * Landmark dots.
+                 */
+                for (
+                    const landmark of
+                    landmarks
+                ) {
+                    const point =
+                        mapper(
+                            landmark
+                        );
+
+                    drawPoint(
+                        ctx,
+                        point.x,
+                        point.y
+                    );
+                }
+            },
+            [drawPoint]
+        );
+
+    /* =======================================================
+       SMOOTH POSITION
+    ======================================================= */
+
+    const smoothPosition =
+        useCallback(
+            (targetX, targetY) => {
+                const state =
+                    handStateRef.current;
+
+                state.smoothX +=
+                    (
+                        targetX -
+                        state.smoothX
+                    ) *
+                    POSITION_SMOOTHING;
+
+                state.smoothY +=
+                    (
+                        targetY -
+                        state.smoothY
+                    ) *
+                    POSITION_SMOOTHING;
+
+                return {
+                    x: state.smoothX,
+                    y: state.smoothY,
+                };
+            },
+            []
+        );
+
+    /* =======================================================
+       PROCESS ONE HAND
+    ======================================================= */
+
+    const processOneHand =
+        useCallback(
+            (hand) => {
+                const state =
+                    handStateRef.current;
+
+                const palm =
+                    getPalmCenter(
+                        hand
+                    );
+
+                if (!palm) {
+                    return null;
+                }
+
+                const gesture =
+                    detectGesture(
+                        hand,
+                        state.oneHandPinching
+                    );
+
+                state.oneHandPinching =
+                    gesture.isPinching;
+
+                /*
+                 * Mirror X.
+                 */
+                const targetX =
+                    Math.min(
+                        0.94,
+                        Math.max(
+                            0.06,
+                            1 -
+                            palm.x
+                        )
+                    );
+
+                const targetY =
+                    Math.min(
+                        0.92,
+                        Math.max(
+                            0.08,
+                            palm.y
+                        )
+                    );
+
+                const position =
+                    smoothPosition(
+                        targetX,
+                        targetY
+                    );
+
+                /* =================================================
+                   PINCH = HOLD PORTAL
+                ================================================= */
+
+                if (
+                    gesture.isPinching
+                ) {
+                    state.grabbed = true;
+
+                    return {
+                        interaction: "grab",
+
+                        grabbed: true,
+
+                        x: position.x,
+                        y: position.y,
+
+                        scale: 1,
+
+                        gesture: "pinch",
+
+                        pinchDistance:
+                            gesture.pinchDistance,
+
+                        hands: 1,
+                    };
+                }
+
+                /* =================================================
+                   RELEASE
+                ================================================= */
+
+                if (
+                    state.grabbed
+                ) {
+                    state.grabbed = false;
+
+                    state.lastTwoHandDistance =
+                        null;
+
+                    return {
+                        interaction: "release",
+
+                        grabbed: false,
+
+                        x: position.x,
+                        y: position.y,
+
+                        scale: 1,
+
+                        gesture: "none",
+
+                        hands: 1,
+                    };
+                }
+
+                /* =================================================
+                   POINT = MOVE
+                ================================================= */
+
+                if (
+                    gesture.gesture ===
+                    "point"
+                ) {
+                    return {
+                        interaction: "move",
+
+                        grabbed: false,
+
+                        x: position.x,
+                        y: position.y,
+
+                        scale: 1,
+
+                        gesture: "point",
+
+                        hands: 1,
+                    };
+                }
+
+                /* =================================================
+                   OPEN PALM
+                   Keep following the palm.
+                ================================================= */
+
+                if (
+                    gesture.gesture ===
+                    "open_palm"
+                ) {
+                    return {
+                        interaction: "move",
+
+                        grabbed: false,
+
+                        x: position.x,
+                        y: position.y,
+
+                        scale: 1,
+
+                        gesture: "open_palm",
+
+                        hands: 1,
+                    };
+                }
+
+                return {
+                    interaction: "none",
+
+                    grabbed:
+                        state.grabbed,
+
+                    x: position.x,
+                    y: position.y,
+
+                    scale: 1,
+
+                    gesture:
+                        gesture.gesture,
+
+                    hands: 1,
+
+                    pinchDistance:
+                        gesture.pinchDistance,
+                };
+            },
+            [smoothPosition]
+        );
+
+    /* =======================================================
+       PROCESS TWO HANDS
+    ======================================================= */
+
+    const processTwoHands =
+        useCallback(
+            (hands) => {
+                const state =
+                    handStateRef.current;
+
+                const hand1 =
+                    getPalmCenter(
+                        hands[0]
+                    );
+
+                const hand2 =
+                    getPalmCenter(
+                        hands[1]
+                    );
+
+                if (
+                    !hand1 ||
+                    !hand2
+                ) {
+                    return null;
+                }
+
+                const gesture1 =
+                    detectGesture(
+                        hands[0],
+                        state.hand1Pinching
+                    );
+
+                const gesture2 =
+                    detectGesture(
+                        hands[1],
+                        state.hand2Pinching
+                    );
+
+                state.hand1Pinching =
+                    gesture1.isPinching;
+
+                state.hand2Pinching =
+                    gesture2.isPinching;
+
+                /*
+                 * Center between both palms.
+                 */
+                const centerX =
+                    (
+                        hand1.x +
+                        hand2.x
+                    ) / 2;
+
+                const centerY =
+                    (
+                        hand1.y +
+                        hand2.y
+                    ) / 2;
+
+                /*
+                 * Mirror X.
+                 */
+                const targetX =
+                    Math.min(
+                        0.94,
+                        Math.max(
+                            0.06,
+                            1 -
+                            centerX
+                        )
+                    );
+
+                const targetY =
+                    Math.min(
+                        0.92,
+                        Math.max(
+                            0.08,
+                            centerY
+                        )
+                    );
+
+                const position =
+                    smoothPosition(
+                        targetX,
+                        targetY
+                    );
+
+                /*
+                 * Distance between palms.
+                 */
+                const dx =
+                    hand1.x -
+                    hand2.x;
+
+                const dy =
+                    hand1.y -
+                    hand2.y;
+
+                const handDistance =
+                    Math.sqrt(
+                        dx * dx +
+                        dy * dy
+                    );
+
+                /*
+                 * One or both hands pinching
+                 * means the portal is being held.
+                 */
+                const grabbing =
+                    gesture1.isPinching ||
+                    gesture2.isPinching;
+
+                if (grabbing) {
+                    state.grabbed = true;
+                }
+
+                /*
+                 * Relative scaling.
+                 */
+                let scale = 1;
+
+                if (
+                    state.lastTwoHandDistance !==
+                    null &&
+                    state.lastTwoHandDistance >
+                    0
+                ) {
+                    const rawScale =
+                        handDistance /
+                        state.lastTwoHandDistance;
+
+                    /*
+                     * Prevent huge jumps from
+                     * occasional MediaPipe noise.
+                     */
+                    scale =
+                        Math.min(
+                            1.08,
+                            Math.max(
+                                0.92,
+                                rawScale
+                            )
+                        );
+                }
+
+                state.lastTwoHandDistance =
+                    handDistance;
+
+                /*
+                 * Smooth scale slightly.
+                 */
+                state.scale +=
+                    (
+                        scale -
+                        state.scale
+                    ) *
+                    SIZE_SMOOTHING;
+
+                /*
+                 * If both hands are present,
+                 * always treat the portal as
+                 * sitting between them.
+                 */
+                return {
+                    interaction:
+                        grabbing
+                            ? "grab"
+                            : "two_hand",
+
+                    grabbed:
+                        state.grabbed ||
+                        grabbing,
+
+                    x: position.x,
+                    y: position.y,
+
+                    scale: state.scale,
+
+                    handDistance,
+
+                    hands: 2,
+
+                    gesture:
+                        grabbing
+                            ? "pinch"
+                            : "two_hand",
+
+                    pinchDistance:
+                        Math.min(
+                            gesture1.pinchDistance,
+                            gesture2.pinchDistance
+                        ),
+                };
+            },
+            [smoothPosition]
+        );
+
+    /* =======================================================
+       PROCESS INTERACTION
+    ======================================================= */
+
+    const processInteraction =
+        useCallback(
+            (hands) => {
+                const state =
+                    handStateRef.current;
+
+                /*
+                 * No hands.
+                 */
+                if (!hands.length) {
+                    const wasGrabbed =
+                        state.grabbed;
+
+                    state.grabbed = false;
+
+                    state.oneHandPinching =
+                        false;
+
+                    state.hand1Pinching =
+                        false;
+
+                    state.hand2Pinching =
+                        false;
+
+                    state.lastTwoHandDistance =
+                        null;
+
+                    state.scale = 1;
+
+                    return {
+                        interaction:
+                            wasGrabbed
+                                ? "release"
+                                : "none",
+
+                        grabbed: false,
+
+                        x: state.smoothX,
+                        y: state.smoothY,
+
+                        scale: 1,
+
+                        hands: 0,
+                    };
+                }
+
+                /*
+                 * One hand.
+                 */
+                if (
+                    hands.length === 1
+                ) {
+                    /*
+                     * Reset two-hand state.
+                     */
+                    state.hand1Pinching =
+                        false;
+
+                    state.hand2Pinching =
+                        false;
+
+                    state.lastTwoHandDistance =
+                        null;
+
+                    state.scale = 1;
+
+                    return processOneHand(
+                        hands[0]
+                    );
+                }
+
+                /*
+                 * Two hands.
+                 */
+                return processTwoHands(
+                    hands
+                );
+            },
+            [
+                processOneHand,
+                processTwoHands,
+            ]
+        );
+
+    /* =======================================================
+       DRAW + RESULTS
     ======================================================= */
 
     const drawResults =
@@ -555,19 +1346,14 @@ export default function HandTracker({
                 }
 
                 /*
-                 * Clear previous frame.
+                 * Clear previous skeleton.
                  */
-
                 ctx.clearRect(
                     0,
                     0,
                     width,
                     height
                 );
-
-                /*
-                 * Get coordinate mapper.
-                 */
 
                 const mapper =
                     getCoordinateMapper(
@@ -580,44 +1366,80 @@ export default function HandTracker({
                     return;
                 }
 
-                /*
-                 * Draw all detected hands.
-                 */
+                const hands =
+                    results?.landmarks ||
+                    [];
 
-                if (
-                    results?.landmarks
-                        ?.length
+                /*
+                 * Draw hands.
+                 */
+                for (
+                    const landmarks of
+                    hands
                 ) {
-                    for (
-                        const landmarks of
-                        results.landmarks
-                    ) {
-                        drawHand(
-                            ctx,
-                            landmarks,
-                            mapper
-                        );
-                    }
+                    drawHand(
+                        ctx,
+                        landmarks,
+                        mapper
+                    );
                 }
 
                 /*
-                 * Send MediaPipe results
-                 * to VisionStudio.
+                 * Process interaction.
                  */
+                const interaction =
+                    processInteraction(
+                        hands
+                    );
 
-                onResultsRef.current?.(
-                    results
-                );
+                /*
+                 * Send data to VisionStudio.
+                 */
+                onResultsRef.current?.({
+                    ...results,
+
+                    interaction,
+
+                    hands,
+
+                    handCount:
+                        hands.length,
+
+                    gesture:
+                        interaction?.gesture ||
+                        "none",
+
+                    grabbed:
+                        interaction?.grabbed ||
+                        false,
+
+                    portalX:
+                        interaction?.x ??
+                        0.5,
+
+                    portalY:
+                        interaction?.y ??
+                        0.5,
+
+                    portalScale:
+                        interaction?.scale ??
+                        1,
+
+                    pinchDistance:
+                        interaction?.pinchDistance ??
+                        1,
+                });
             },
             [
                 videoRef,
                 getCoordinateMapper,
                 drawHand,
+                processInteraction,
             ]
         );
 
     /* =======================================================
-       Detection loop
+       DETECTION LOOP
     ======================================================= */
 
     useEffect(() => {
@@ -677,60 +1499,18 @@ export default function HandTracker({
                     return;
                 }
 
-                /*
-                 * Wait until video has
-                 * real dimensions.
-                 */
-
                 if (
                     video.readyState >= 2 &&
                     video.videoWidth > 0 &&
                     video.videoHeight > 0
                 ) {
-                    /*
-                     * Reset canvas dimensions
-                     * if camera dimensions
-                     * have changed.
-                     */
-
-                    const canvas =
-                        canvasRef.current;
-
-                    if (canvas) {
-                        const rect =
-                            video.getBoundingClientRect();
-
-                        const expectedWidth =
-                            Math.round(
-                                rect.width *
-                                (
-                                    window.devicePixelRatio ||
-                                    1
-                                )
-                            );
-
-                        const expectedHeight =
-                            Math.round(
-                                rect.height *
-                                (
-                                    window.devicePixelRatio ||
-                                    1
-                                )
-                            );
-
-                        if (
-                            canvas.width !==
-                            expectedWidth ||
-                            canvas.height !==
-                            expectedHeight
-                        ) {
-                            resizeCanvas();
-                        }
-                    }
-
                     const currentTime =
                         video.currentTime;
 
+                    /*
+                     * Only run MediaPipe once
+                     * for every actual video frame.
+                     */
                     if (
                         currentTime !==
                         lastVideoTimeRef.current
@@ -749,12 +1529,6 @@ export default function HandTracker({
                                 results
                             );
                         } catch (err) {
-                            /*
-                             * Don't kill the
-                             * animation loop if
-                             * one frame fails.
-                             */
-
                             console.error(
                                 "Hand detection failed:",
                                 err
@@ -801,7 +1575,7 @@ export default function HandTracker({
     ]);
 
     /* =======================================================
-       Render
+       RENDER
     ======================================================= */
 
     return (
@@ -823,12 +1597,6 @@ export default function HandTracker({
                             : "none",
                 }}
             />
-
-            {/* -------------------------------------------------
-                Error indicator
-
-                Keep this outside the canvas.
-            ------------------------------------------------- */}
 
             {enabled && error && (
                 <div

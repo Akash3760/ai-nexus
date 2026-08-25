@@ -9,7 +9,6 @@ import { motion } from "framer-motion";
 
 import {
     ArrowLeft,
-    Camera,
     Sparkles,
     Hand,
     ScanFace,
@@ -91,29 +90,36 @@ const shapes = [
 ];
 
 /* =========================================================
+   PORTAL LIMITS
+========================================================= */
+
+const MIN_PORTAL_SIZE = 120;
+const MAX_PORTAL_SIZE = 460;
+
+/* =========================================================
    COMPONENT
 ========================================================= */
 
 export default function VisionStudio() {
     const cameraRef = useRef(null);
 
-    /* -------------------------------------------------------
+    /* =======================================================
        UI
-    ------------------------------------------------------- */
+    ======================================================= */
 
     const [controlsOpen, setControlsOpen] =
         useState(true);
 
-    /* -------------------------------------------------------
+    /* =======================================================
        CAMERA
-    ------------------------------------------------------- */
+    ======================================================= */
 
     const [videoElement, setVideoElement] =
         useState(null);
 
-    /* -------------------------------------------------------
+    /* =======================================================
        PORTAL
-    ------------------------------------------------------- */
+    ======================================================= */
 
     const [portalPosition, setPortalPosition] =
         useState({
@@ -124,23 +130,32 @@ export default function VisionStudio() {
     const [portalSize, setPortalSize] =
         useState(220);
 
-    /* -------------------------------------------------------
+    /* =======================================================
+       HAND DETECTION
+       -------------------------------------------------------
+       Portal is ONLY visible when a hand exists.
+    ======================================================= */
+
+    const [handDetected, setHandDetected] =
+        useState(false);
+
+    /* =======================================================
        EFFECT
-    ------------------------------------------------------- */
+    ======================================================= */
 
     const [selectedEffect, setSelectedEffect] =
         useState("classic");
 
-    /* -------------------------------------------------------
+    /* =======================================================
        SHAPE
-    ------------------------------------------------------- */
+    ======================================================= */
 
     const [selectedShape, setSelectedShape] =
         useState("circle");
 
-    /* -------------------------------------------------------
+    /* =======================================================
        HAND TRACKING
-    ------------------------------------------------------- */
+    ======================================================= */
 
     const [trackingEnabled, setTrackingEnabled] =
         useState(false);
@@ -149,76 +164,146 @@ export default function VisionStudio() {
        CURRENT EFFECT
     ======================================================= */
 
-    const currentEffect = effects.find(
-        (effect) =>
-            effect.id === selectedEffect
-    );
+    const currentEffect =
+        effects.find(
+            (effect) =>
+                effect.id === selectedEffect
+        );
+
+    /* =======================================================
+       CURRENT SHAPE
+    ======================================================= */
+
+    const currentShape =
+        shapes.find(
+            (shape) =>
+                shape.id === selectedShape
+        );
 
     /* =======================================================
        HAND RESULTS
-       -------------------------------------------------------
-       MediaPipe coordinates:
-           x = 0 → left
-           x = 1 → right
-
-       Camera is mirrored using scale-x-[-1],
-       therefore we invert X here.
     ======================================================= */
 
-    const handleHandResults = useCallback(
-        (results) => {
-            if (
-                !trackingEnabled ||
-                !results?.landmarks?.length
-            ) {
-                return;
-            }
+    const handleHandResults =
+        useCallback(
+            (results) => {
+                if (
+                    !trackingEnabled ||
+                    !results
+                ) {
+                    setHandDetected(false);
+                    return;
+                }
 
-            const landmarks =
-                results.landmarks[0];
+                /* =================================================
+                   DETECT WHETHER A HAND EXISTS
+                ================================================= */
 
-            if (!landmarks) {
-                return;
-            }
+                const handCount =
+                    results.handCount ??
+                    results.hands?.length ??
+                    0;
 
-            /* -----------------------------------------------
-               Index fingertip = landmark 8
-            ----------------------------------------------- */
+                const hasHand =
+                    handCount > 0;
 
-            const indexTip =
-                landmarks[8];
+                setHandDetected(hasHand);
 
-            if (!indexTip) {
-                return;
-            }
+                /* =================================================
+                   NO HAND
+                   
+                   Hide portal and stop processing.
+                ================================================= */
 
-            /* -----------------------------------------------
-               Keep portal inside camera
-            ----------------------------------------------- */
+                if (!hasHand) {
+                    return;
+                }
 
-            const x = Math.min(
-                0.95,
-                Math.max(
-                    0.05,
-                    1 - indexTip.x
-                )
+                const interaction =
+                    results.interaction;
+
+                if (!interaction) {
+                    return;
+                }
+
+                /* =================================================
+                   PORTAL POSITION
+                ================================================= */
+
+                if (
+                    interaction.interaction ===
+                    "move" ||
+                    interaction.interaction ===
+                    "grab" ||
+                    interaction.interaction ===
+                    "two_hand"
+                ) {
+                    if (
+                        typeof interaction.x ===
+                        "number" &&
+                        typeof interaction.y ===
+                        "number"
+                    ) {
+                        setPortalPosition({
+                            x: interaction.x,
+                            y: interaction.y,
+                        });
+                    }
+                }
+
+                /* =================================================
+                   TWO HAND RESIZE
+                ================================================= */
+
+                if (
+                    interaction.hands === 2 &&
+                    typeof interaction.scale ===
+                    "number"
+                ) {
+                    setPortalSize(
+                        (currentSize) => {
+                            const nextSize =
+                                currentSize *
+                                interaction.scale;
+
+                            return Math.min(
+                                MAX_PORTAL_SIZE,
+                                Math.max(
+                                    MIN_PORTAL_SIZE,
+                                    nextSize
+                                )
+                            );
+                        }
+                    );
+                }
+            },
+            [trackingEnabled]
+        );
+
+    /* =======================================================
+       TRACKING TOGGLE
+    ======================================================= */
+
+    const handleTrackingToggle =
+        useCallback(() => {
+            setTrackingEnabled(
+                (current) => {
+                    const next =
+                        !current;
+
+                    /*
+                     * If tracking is disabled,
+                     * immediately hide portal.
+                     */
+
+                    if (!next) {
+                        setHandDetected(false);
+                    }
+
+                    return next;
+                }
             );
-
-            const y = Math.min(
-                0.90,
-                Math.max(
-                    0.10,
-                    indexTip.y
-                )
-            );
-
-            setPortalPosition({
-                x,
-                y,
-            });
-        },
-        [trackingEnabled]
-    );
+        }, []);
 
     /* =======================================================
        RENDER
@@ -322,13 +407,14 @@ export default function VisionStudio() {
                                 md:text-base
                             "
                         >
-                            Explore real-time computer vision
-                            using your camera, gesture tracking,
-                            and interactive visual effects.
+                            Explore real-time computer
+                            vision using your camera,
+                            gesture tracking, and
+                            interactive visual effects.
                         </p>
                     </div>
 
-                    {/* Status */}
+                    {/* STATUS */}
 
                     <div
                         className="
@@ -351,17 +437,21 @@ export default function VisionStudio() {
                                 h-2
                                 w-2
                                 rounded-full
-                                ${trackingEnabled
+                                ${handDetected
                                     ? "animate-pulse bg-emerald-500"
-                                    : "bg-slate-400"
+                                    : trackingEnabled
+                                        ? "bg-amber-400"
+                                        : "bg-slate-400"
                                 }
                             `}
                         />
 
                         <span className="font-medium">
-                            {trackingEnabled
-                                ? "Tracking Active"
-                                : "Ready"}
+                            {!trackingEnabled
+                                ? "Ready"
+                                : handDetected
+                                    ? "Hand Detected"
+                                    : "Waiting for Hand"}
                         </span>
                     </div>
                 </div>
@@ -395,7 +485,7 @@ export default function VisionStudio() {
                         shadow-sm
                     "
                 >
-                    {/* Camera Header */}
+                    {/* CAMERA HEADER */}
 
                     <div
                         className="
@@ -488,44 +578,41 @@ export default function VisionStudio() {
                         </div>
                     </div>
 
-                    {/* =================================================
-                        CAMERA
-                    ================================================= */}
+                    {/* CAMERA */}
 
                     <div className="relative">
                         <CameraView
                             ref={cameraRef}
-                            onVideoReady={setVideoElement}
+                            onVideoReady={
+                                setVideoElement
+                            }
                             trackingEnabled={
                                 trackingEnabled
                             }
                         >
-                            {/* -------------------------------------------------
+                            {/* =================================================
                                 PORTAL
 
-                                CameraView only renders children while
-                                cameraActive is true.
-                            ------------------------------------------------- */}
+                                IMPORTANT:
+                                Portal exists ONLY while
+                                a hand is detected.
+                            ================================================= */}
 
-                            <PortalOverlay
-                                x={
-                                    portalPosition.x
-                                }
-                                y={
-                                    portalPosition.y
-                                }
-                                size={portalSize}
-                                shape={
-                                    selectedShape
-                                }
-                                effect={
-                                    selectedEffect
-                                }
-                            />
+                            {trackingEnabled &&
+                                handDetected && (
+                                    <PortalOverlay
+                                        x={portalPosition.x}
+                                        y={portalPosition.y}
+                                        size={portalSize}
+                                        shape={selectedShape}
+                                        effect={selectedEffect}
+                                        visible={trackingEnabled && handDetected}
+                                    />
+                                )}
 
-                            {/* -------------------------------------------------
+                            {/* =================================================
                                 HAND TRACKER
-                            ------------------------------------------------- */}
+                            ================================================= */}
 
                             {videoElement &&
                                 trackingEnabled && (
@@ -547,14 +634,12 @@ export default function VisionStudio() {
                 </div>
 
                 {/* =================================================
-                    CONTROLS
+                    RIGHT CONTROLS
                 ================================================= */}
 
                 {controlsOpen && (
                     <div className="space-y-6">
-                        {/* =================================================
-                            HAND TRACKING
-                        ================================================= */}
+                        {/* HAND TRACKING */}
 
                         <div
                             className="
@@ -583,7 +668,8 @@ export default function VisionStudio() {
                                     </h3>
 
                                     <p className="text-xs text-muted-foreground">
-                                        Gesture controls
+                                        Control the portal
+                                        with your hands
                                     </p>
                                 </div>
                             </div>
@@ -600,7 +686,7 @@ export default function VisionStudio() {
                                     p-3
                                 "
                             >
-                                <div className="min-w-0">
+                                <div>
                                     <p className="text-sm font-medium">
                                         Tracking
                                     </p>
@@ -610,19 +696,14 @@ export default function VisionStudio() {
                                     </p>
                                 </div>
 
-                                {/* Toggle */}
-
                                 <button
                                     type="button"
                                     role="switch"
                                     aria-checked={
                                         trackingEnabled
                                     }
-                                    onClick={() =>
-                                        setTrackingEnabled(
-                                            (value) =>
-                                                !value
-                                        )
+                                    onClick={
+                                        handleTrackingToggle
                                     }
                                     className={`
                                         relative
@@ -666,9 +747,7 @@ export default function VisionStudio() {
                             </div>
                         </div>
 
-                        {/* =================================================
-                            EFFECTS
-                        ================================================= */}
+                        {/* VISION EFFECTS */}
 
                         <div
                             className="
@@ -686,8 +765,8 @@ export default function VisionStudio() {
                                 </h3>
 
                                 <p className="mt-1 text-xs text-muted-foreground">
-                                    Choose a real-time visual
-                                    effect.
+                                    Choose a real-time
+                                    visual effect.
                                 </p>
                             </div>
 
@@ -754,8 +833,6 @@ export default function VisionStudio() {
                                 )}
                             </div>
 
-                            {/* Selected Effect */}
-
                             {currentEffect && (
                                 <div
                                     className="
@@ -785,9 +862,7 @@ export default function VisionStudio() {
                             )}
                         </div>
 
-                        {/* =================================================
-                            SHAPES
-                        ================================================= */}
+                        {/* PORTAL SHAPE */}
 
                         <div
                             className="
@@ -805,8 +880,8 @@ export default function VisionStudio() {
                                 </h3>
 
                                 <p className="mt-1 text-xs text-muted-foreground">
-                                    Select the shape used by
-                                    the vision effect.
+                                    Select the portal
+                                    shape.
                                 </p>
                             </div>
 
@@ -859,6 +934,28 @@ export default function VisionStudio() {
                                     }
                                 )}
                             </div>
+
+                            {currentShape && (
+                                <div
+                                    className="
+                                        mt-4
+                                        rounded-xl
+                                        bg-muted/50
+                                        px-3
+                                        py-2.5
+                                        text-xs
+                                    "
+                                >
+                                    <span className="text-muted-foreground">
+                                        Selected:
+                                    </span>{" "}
+                                    <span className="font-medium">
+                                        {
+                                            currentShape.name
+                                        }
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -895,9 +992,9 @@ export default function VisionStudio() {
                         </h2>
 
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Once hand tracking is enabled,
-                            use these gestures to interact
-                            with Vision Studio.
+                            Manipulate the portal
+                            naturally using one or
+                            two hands.
                         </p>
                     </div>
                 </div>
@@ -911,8 +1008,6 @@ export default function VisionStudio() {
                         lg:grid-cols-4
                     "
                 >
-                    {/* Point */}
-
                     <div
                         className="
                             rounded-2xl
@@ -931,12 +1026,10 @@ export default function VisionStudio() {
                         </h3>
 
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            Move the portal around
-                            the screen.
+                            Move the portal with
+                            your hand.
                         </p>
                     </div>
-
-                    {/* Pinch */}
 
                     <div
                         className="
@@ -952,15 +1045,14 @@ export default function VisionStudio() {
                         </div>
 
                         <h3 className="mt-3 text-sm font-semibold">
-                            Pinch
+                            Pinch & Hold
                         </h3>
 
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            Resize the active portal.
+                            Grab and move the
+                            portal.
                         </p>
                     </div>
-
-                    {/* Open Palm */}
 
                     <div
                         className="
@@ -980,12 +1072,10 @@ export default function VisionStudio() {
                         </h3>
 
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            Switch between visual
-                            effects.
+                            Move the portal using
+                            your palm.
                         </p>
                     </div>
-
-                    {/* Two Fingers */}
 
                     <div
                         className="
@@ -997,16 +1087,16 @@ export default function VisionStudio() {
                         "
                     >
                         <div className="text-2xl">
-                            ✌️
+                            👐
                         </div>
 
                         <h3 className="mt-3 text-sm font-semibold">
-                            Two Fingers
+                            Two Hands
                         </h3>
 
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            Change the active portal
-                            shape.
+                            Hold between both
+                            hands and resize.
                         </p>
                     </div>
                 </div>
